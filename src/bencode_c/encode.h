@@ -1,9 +1,7 @@
-#include "object.h"
 #include "stdio.h"
 #include "string.h"
 
 #include "common.h"
-#include "unicodeobject.h"
 
 static PyObject *BencodeEncodeError;
 
@@ -184,15 +182,25 @@ static int encodeAny(struct buffer *buf, HPy obj) {
     returnIfError(bufferWrite(buf, "i", 1));
     returnIfError(bufferWriteLong(buf, val));
     return bufferWrite(buf, "e", 1);
-  } else if (PyList_Check(obj) || PyTuple_Check(obj)) {
-    HPy_ssize_t len = PySequence_Length(obj);
+  } else if (PyList_Check(obj)) {
+    HPy_ssize_t len = PyList_Size(obj);
     returnIfError(bufferWrite(buf, "l", 1));
 
     for (HPy_ssize_t i = 0; i < len; i++) {
-      HPy o = PySequence_GetItem(obj, i);
+      HPy o = PyList_GetItem(obj, i);
       returnIfError(encodeAny(buf, o));
     }
     return bufferWrite(buf, "e", 1);
+  } else if (PyTuple_Check(obj)) {
+    HPy_ssize_t len = PyTuple_Size(obj);
+    returnIfError(bufferWrite(buf, "l", 1));
+
+    for (HPy_ssize_t i = 0; i < len; i++) {
+      HPy o = PyTuple_GetItem(obj, i);
+      returnIfError(encodeAny(buf, o));
+    }
+    return bufferWrite(buf, "e", 1);
+
   } else if (PyDict_Check(obj)) {
     returnIfError(bufferWrite(buf, "d", 1));
     HPy list = NULL;
@@ -236,15 +244,7 @@ static int encodeAny(struct buffer *buf, HPy obj) {
 
   HPy typ = PyObject_Type(obj);
 
-  // int j = snprintf(NULL, 0, NON_SUPPORTED_TYPE_MESSAGE, typ->ob_type->tp_name) + 1;
-
-  // char *s = (char *)malloc(sizeof(char) * j);
-
-  // snprintf(s, j, NON_SUPPORTED_TYPE_MESSAGE, typ->tp_name);
-
   PyErr_SetObject(BencodeEncodeError, PyUnicode_Format(PyUnicode_FromString(NON_SUPPORTED_TYPE_MESSAGE), typ));
-
-  // free(s);
 
   return 1;
 }

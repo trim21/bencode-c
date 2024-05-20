@@ -83,13 +83,13 @@ def test_encode():
             "favoriteFruit": "banana",
         }
     ) == (
-               b"d3:_id24:5973782bdb9a930533b05cb23:agei32e7:balance9"
-               b":$1,446.357:company5:ARTIQ5:email21:logankeller@artiq.c"
-               b"om8:eyeColor5:green13:favoriteFruit6:banana7:friendsld2"
-               b":idi0e4:name13:Colon Salazared2:idi1e4:name13:French Mc"
-               b"neiled2:idi2e4:name12:Carol Martinee6:gender4:male8:isA"
-               b"ctivei1e4:name12:Logan Keller5:phone17:+1 (952) 533-2258e"
-           )
+        b"d3:_id24:5973782bdb9a930533b05cb23:agei32e7:balance9"
+        b":$1,446.357:company5:ARTIQ5:email21:logankeller@artiq.c"
+        b"om8:eyeColor5:green13:favoriteFruit6:banana7:friendsld2"
+        b":idi0e4:name13:Colon Salazared2:idi1e4:name13:French Mc"
+        b"neiled2:idi2e4:name12:Carol Martinee6:gender4:male8:isA"
+        b"ctivei1e4:name12:Logan Keller5:phone17:+1 (952) 533-2258e"
+    )
 
 
 def test_duplicated_type_keys():
@@ -116,6 +116,8 @@ def test_dict_int_keys():
         ({b"cow": b"moo", b"spam": b"eggs"}, b"d3:cow3:moo4:spam4:eggse"),
         ({b"spam": [b"a", b"b"]}, b"d4:spaml1:a1:bee"),
         ({}, b"de"),
+        ((1, 2), b"li1ei2ee"),
+        ([1, 2], b"li1ei2ee"),
     ],
 )
 def test_basic(raw: Any, expected: bytes):
