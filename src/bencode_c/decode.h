@@ -1,8 +1,3 @@
-// #include <stdio.h>
-// #include <string.h>
-
-#include "Python.h"
-
 #include "common.h"
 
 static PyObject *BencodeDecodeError;

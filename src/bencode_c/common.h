@@ -1,4 +1,4 @@
-#define Py_LIMITED_API 0x03080000
+#include "Python.h"
 
 #ifndef MY_COMMON_H
 
