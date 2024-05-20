@@ -1,3 +1,4 @@
+#include "object.h"
 #include "stdio.h"
 #include "string.h"
 
@@ -252,9 +253,11 @@ static HPy bencode(HPy self, HPy obj) {
   // self is the module object
 
   struct buffer *buf = newBuffer();
+  Py_IncRef(obj);
 
   if (encodeAny(buf, obj)) {
     freeBuffer(buf);
+    Py_DecRef(obj);
     // error when encoding
     return NULL;
   }
@@ -262,6 +265,7 @@ static HPy bencode(HPy self, HPy obj) {
   HPy res = PyBytes_FromStringAndSize(buf->buf, buf->len);
 
   freeBuffer(buf);
+  Py_DecRef(obj);
 
   return res;
 };
