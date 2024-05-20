@@ -12,4 +12,5 @@ setup(
     ext_modules=[module],
     packages=find_packages("src"),
     package_dir={"": "src"},
+    options={'bdist_wheel': {'py_limited_api': 'cp38'}},
 )
