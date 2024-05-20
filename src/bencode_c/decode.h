@@ -1,3 +1,5 @@
+#include "common.h"
+
 static PyObject *BencodeDecodeError;
 
 static PyObject *decode_any(const char *buf, HPy_ssize_t *index, HPy_ssize_t size);
