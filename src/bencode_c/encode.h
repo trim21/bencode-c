@@ -1,8 +1,6 @@
 #include "stdio.h"
 #include "string.h"
 
-#include "common.h"
-
 static PyObject *BencodeEncodeError;
 
 #define NON_SUPPORTED_TYPE_MESSAGE                                                                                     \

@@ -1,24 +1,11 @@
-#include "common.h"
-
 static PyObject *BencodeDecodeError;
 
 static PyObject *decode_any(const char *buf, HPy_ssize_t *index, HPy_ssize_t size);
-
-// HPyGlobal BencodeDecodeError;
 
 static inline HPy decodeError(const char *fmt, ...) {
   PyErr_SetObject(BencodeDecodeError, PyUnicode_FromFormat(fmt));
   return NULL;
 }
-
-// // int strcom(const char *s1, const char *s2);
-
-// static HPy decode_any(HPyContext *ctx, const char *buf, HPy_ssize_t *index,
-// HPy_ssize_t size); static HPy decode_int(HPyContext *ctx, const char *buf,
-// HPy_ssize_t *index, HPy_ssize_t size); static HPy decode_str(HPyContext *ctx,
-// const char *buf, HPy_ssize_t *index, HPy_ssize_t size); static HPy
-// decode_list(HPyContext *ctx, const char *buf, HPy_ssize_t *index, HPy_ssize_t
-// size);
 
 static HPy decode_int(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
   HPy_ssize_t index_e = 0;
