@@ -1,4 +1,4 @@
-#define Py_LIMITED_API 0x03080000
+#define Py_LIMITED_API 0x03070000
 
 // TODO: should use a extern here
 #include "decode.h"
