@@ -4,7 +4,7 @@ from setuptools import setup, Extension
 
 module = Extension(
     "bencode_c._bencode",
-    sources=glob("./src/bencode_c/*.c"),
+    sources=glob("./src/bencode_c/*.[ch]"),
     include_dirs=["./src/bencode_c"],
 )
 
