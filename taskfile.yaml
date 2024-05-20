@@ -10,7 +10,7 @@ tasks:
     cmds:
       - git add pyproject.toml
       - 'git commit -m "bump: {{.VERSION}}"'
-      - 'git tag "v{{.VERSION}}"'
+      - 'git tag "v{{.VERSION}}" -m "v{{.VERSION}}"'
 
   dev:
     sources:
