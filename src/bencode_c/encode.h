@@ -2,6 +2,7 @@
 #include "string.h"
 
 #include "common.h"
+#include "unicodeobject.h"
 
 static PyObject *BencodeEncodeError;
 
@@ -124,7 +125,7 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
   for (HPy_ssize_t i = 0; i < *count; i++) {
     HPy keyValue = PyList_GetItem(*list, i);
     HPy key = PyTuple_GetItem(keyValue, 0);
-    currentKeylen = PyBytes_GET_SIZE(key);
+    currentKeylen = PyBytes_Size(key);
     currentKey = PyBytes_AsString(key);
     if (lastKey != NULL) {
       if (lastKeylen == currentKeylen) {
@@ -158,8 +159,15 @@ static int encodeAny(struct buffer *buf, HPy obj) {
   } else if (PyBytes_Check(obj)) {
     return encodeBytes(buf, obj);
   } else if (PyUnicode_Check(obj)) {
+
+#if PY_VERSION_HEX >= 0x03100000
     HPy_ssize_t size;
     const char *data = PyUnicode_AsUTF8AndSize(obj, &size);
+#else
+    HPy b = PyUnicode_AsUTF8String(obj);
+    HPy_ssize_t size = PyBytes_Size(b);
+    const char *data = PyBytes_AsString(b);
+#endif
 
     returnIfError(bufferWriteLong(buf, size));
     returnIfError(bufferWrite(buf, ":", 1));
@@ -225,17 +233,17 @@ static int encodeAny(struct buffer *buf, HPy obj) {
     return bufferWrite(buf, "e", 1);
   }
 
-  PyTypeObject *typ = obj->ob_type;
+  HPy typ = PyObject_Type(obj);
 
-  int j = snprintf(NULL, 0, NON_SUPPORTED_TYPE_MESSAGE, typ->tp_name) + 1;
+  // int j = snprintf(NULL, 0, NON_SUPPORTED_TYPE_MESSAGE, typ->ob_type->tp_name) + 1;
 
-  char *s = (char *)malloc(sizeof(char) * j);
+  // char *s = (char *)malloc(sizeof(char) * j);
 
-  snprintf(s, j, NON_SUPPORTED_TYPE_MESSAGE, typ->tp_name);
+  // snprintf(s, j, NON_SUPPORTED_TYPE_MESSAGE, typ->tp_name);
 
-  PyErr_SetString(BencodeEncodeError, s);
+  PyErr_SetObject(BencodeEncodeError, PyUnicode_Format(PyUnicode_FromString(NON_SUPPORTED_TYPE_MESSAGE), typ));
 
-  free(s);
+  // free(s);
 
   return 1;
 }
