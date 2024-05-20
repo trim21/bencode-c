@@ -3,6 +3,14 @@ tasks:
   build:
     cmds:
       - cmd: python setup.py build wheel
+  bump:
+    vars:
+      VERSION:
+        sh: yq '.project.version' pyproject.toml
+    cmds:
+      - git add pyproject.toml
+      - 'git commit -m "bump: {{.VERSION}}"'
+      - 'git tag "v{{.VERSION}}"'
 
   dev:
     sources:
@@ -11,7 +19,7 @@ tasks:
       - src/**/*.py
       - tests/**/*.py
       - tests/*.py
-      - '*.py'
+      - "*.py"
     generates:
       - src/**/*.so
     env:
