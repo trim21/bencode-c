@@ -37,8 +37,5 @@ testing = [
     "pytest-github-actions-annotate-failures==0.2.0",
 ]
 
-#[tool.distutils.bdist_wheel]
-#py-limited-api = 'cp38'
-
 [tool.pytest.ini_options]
 pythonpath = ['src']
