@@ -1,0 +1,25 @@
+version: 3
+tasks:
+  build:
+    cmds:
+      - cmd: python setup.py build wheel
+
+  dev:
+    sources:
+      - src/**/*.c
+      - src/**/*.h
+      - src/**/*.py
+      - tests/**/*.py
+      - tests/*.py
+      - '*.py'
+    generates:
+      - src/**/*.so
+    env:
+      HPY: trace
+      CFLAGS: "-O0 -g"
+      # LD_PRELOAD: libclang_rt.asan.so
+    cmds:
+      - cmd: python setup.py build_ext --force --inplace
+        silent: true
+      - PYTHONPATH=src python -X faulthandler a.py
+      - pytest -x -v -s
