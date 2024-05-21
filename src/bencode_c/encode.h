@@ -10,7 +10,6 @@ static PyObject *BencodeEncodeError;
   "bencode only support bytes, str, int, list, tuple, dict and bool(encoded as 0/1, decoded as int)"
 
 #define defaultBufferSize 4096
-#define null NULL
 
 #define returnIfError(o)                                                                                               \
   if (o) {                                                                                                             \
@@ -137,6 +136,10 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
     PyList_Append(*list, tu);
     Py_DecRef(tu);
     Py_DecRef(key);
+
+    if (keyAsBytes != key) {
+      Py_DecRef(keyAsBytes);
+    }
   }
 
   Py_DecRef(keys);
@@ -179,7 +182,7 @@ static int encodeStr(struct buffer *buf, HPy obj) {
   HPy_ssize_t size = PyBytes_Size(b);
 
   const char *data = PyBytes_AsString(b);
-  if (data == null) {
+  if (data == NULL) {
     Py_DecRef(b);
     return 1;
   }
@@ -204,6 +207,7 @@ static int encodeBytes(struct buffer *buf, HPy obj) {
 
 static int encodeDict(struct buffer *buf, HPy obj) {
   returnIfError(bufferWrite(buf, "d", 1));
+
   HPy list = NULL;
   HPy_ssize_t count = 0;
   if (buildDictKeyList(obj, &list, &count)) {
