@@ -33,6 +33,7 @@ tasks:
       - "*.py"
     generates:
       - src/**/*.so
+      - src/**/*.pyd
     env:
       HPY: trace
       CFLAGS: "-O0 -g"
@@ -40,4 +41,5 @@ tasks:
     cmds:
       - cmd: python setup.py build_ext --force --inplace
         silent: true
+      - PYTHONPATH=src python -X faulthandler a.py
       - pytest -x -v -s

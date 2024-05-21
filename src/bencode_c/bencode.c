@@ -19,7 +19,13 @@ PyMODINIT_FUNC PyInit__bencode(void) {
   if (m == NULL)
     return NULL;
 
-  BencodeDecodeError = PyErr_NewException("_bencode.BencodeDecodeError", NULL, NULL);
+  errTypeMessage = PyUnicode_FromString(NON_SUPPORTED_TYPE_MESSAGE);
+  if(errTypeMessage == NULL) {
+    Py_DECREF(m);
+    return NULL;
+  }
+
+  BencodeDecodeError = PyErr_NewException("bencode_c.BencodeDecodeError", NULL, NULL);
   Py_XINCREF(BencodeDecodeError);
   if (PyModule_AddObject(m, "BencodeDecodeError", BencodeDecodeError) < 0) {
     Py_XDECREF(BencodeDecodeError);
@@ -28,7 +34,7 @@ PyMODINIT_FUNC PyInit__bencode(void) {
     return NULL;
   }
 
-  BencodeEncodeError = PyErr_NewException("_bencode.BencodeEncodeError", NULL, NULL);
+  BencodeEncodeError = PyErr_NewException("bencode_c.BencodeEncodeError", NULL, NULL);
   Py_XINCREF(BencodeEncodeError);
   if (PyModule_AddObject(m, "BencodeEncodeError", BencodeEncodeError) < 0) {
     Py_XDECREF(BencodeEncodeError);

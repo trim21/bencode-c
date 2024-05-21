@@ -17,6 +17,8 @@ static PyObject *BencodeEncodeError;
     return o;                                                                                                          \
   }
 
+static HPy errTypeMessage;
+
 static inline void runtimeError(const char *data) { PyErr_SetString(PyExc_RuntimeError, data); }
 
 static inline void typeError(const char *data) { PyErr_SetString(PyExc_TypeError, data); }
@@ -77,33 +79,48 @@ static void freeBuffer(struct buffer *buf) {
   free(buf);
 }
 
+static int encodeAny(struct buffer *buf, HPy obj);
+
 // obj must be a python dict object.
 // TODO: use c native struct and sorting
 static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
+  *count = PyObject_Length(obj);
+
+  if (*count == 0) {
+    return 0;
+  }
+
   HPy keys = PyDict_Keys(obj);
   if (keys == NULL) {
     runtimeError("failed to get dict keys");
     return 1;
   }
 
-  *count = PyObject_Length(keys);
-
-  if (*count == 0) {
-    Py_DecRef(keys);
-    return 0;
-  }
-
   *list = PyList_New(0);
 
   for (HPy_ssize_t i = 0; i < *count; i++) {
     HPy key = PySequence_GetItem(keys, i);
-    HPy value = PyDict_GetItem(obj, key);
+    if (key == NULL) {
+      Py_DecRef(keys);
+      runtimeError("failed to get key from dict");
+      return 1;
+    }
+
     HPy keyAsBytes = key;
     if (PyUnicode_Check(key)) {
       keyAsBytes = PyUnicode_AsUTF8String(key);
     } else if (!PyBytes_Check(key)) {
       bencodeError("dict key must be str or bytes");
+      Py_DecRef(keys);
       Py_DecRef(key);
+      return 1;
+    }
+
+    HPy value = PyDict_GetItem(obj, key);
+    if (value == NULL) {
+      Py_DecRef(key);
+      Py_DecRef(keys);
+      runtimeError("failed to get value from dict");
       return 1;
     }
 
@@ -114,6 +131,7 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
     }
 
     PyList_Append(*list, tu);
+    Py_DecRef(tu);
   }
 
   Py_DecRef(keys);
@@ -136,6 +154,8 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
     if (lastKey != NULL) {
       if (lastKeylen == currentKeylen) {
         if (strncmp(lastKey, currentKey, lastKeylen) == 0) {
+          // Py_DecRef(keyValue);
+          // Py_DecRef(key);
           bencodeError("find duplicated keys with str and bytes in dict");
           return 1;
         }
@@ -144,10 +164,31 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
 
     lastKey = currentKey;
     lastKeylen = currentKeylen;
+
+    // Py_DecRef(keyValue);
+    // Py_DecRef(key);
   }
 
   return 0;
 }
+
+// TODO: use PyUnicode_AsUTF8AndSize after 3.10
+static int encodeStr(struct buffer *buf, HPy obj) {
+  HPy b = PyUnicode_AsUTF8String(obj);
+
+  HPy_ssize_t size = PyBytes_Size(b);
+
+  const char *data = PyBytes_AsString(b);
+
+  int err = bufferWriteLong(buf, size);
+  err |= bufferWrite(buf, ":", 1);
+  err |= bufferWrite(buf, data, size);
+
+  Py_DecRef(b);
+
+  return err;
+}
+
 static int encodeBytes(struct buffer *buf, HPy obj) {
   HPy_ssize_t size = PyBytes_Size(obj);
   const char *data = PyBytes_AsString(obj);
@@ -155,6 +196,58 @@ static int encodeBytes(struct buffer *buf, HPy obj) {
   returnIfError(bufferWriteLong(buf, size));
   returnIfError(bufferWrite(buf, ":", 1));
   return bufferWrite(buf, data, size);
+}
+
+static int encodeDict(struct buffer *buf, HPy obj) {
+  returnIfError(bufferWrite(buf, "d", 1));
+  HPy list = NULL;
+  HPy_ssize_t count = 0;
+  if (buildDictKeyList(obj, &list, &count)) {
+    if (list != NULL) {
+      Py_DecRef(list);
+    }
+    return 1;
+  }
+
+  if (count == 0) {
+    return bufferWrite(buf, "e", 1);
+  }
+
+  for (HPy_ssize_t i = 0; i < count; i++) {
+    HPy keyValue = PyList_GetItem(list, i); // tuple[bytes, Any]
+    if (keyValue == NULL) {
+      Py_DecRef(list);
+      runtimeError("failed to get key/value tuple from list");
+      return 1;
+    }
+
+    HPy key = PyTuple_GetItem(keyValue, 0);
+    if (key == NULL) {
+      Py_DecRef(list);
+      runtimeError("can't get key from key,value tuple");
+      return 1;
+    }
+
+    if (encodeBytes(buf, key)) {
+      Py_DecRef(list);
+      return 1;
+    }
+
+    HPy value = PyTuple_GetItem(keyValue, 1);
+    if (value == NULL) {
+      Py_DecRef(list);
+      runtimeError("can't get value");
+      return 1;
+    }
+
+    if (encodeAny(buf, value)) {
+      Py_DecRef(list);
+      return 1;
+    }
+  }
+
+  Py_DecRef(list);
+  return bufferWrite(buf, "e", 1);
 }
 
 static int encodeAny(struct buffer *buf, HPy obj) {
@@ -165,19 +258,7 @@ static int encodeAny(struct buffer *buf, HPy obj) {
   } else if (PyBytes_Check(obj)) {
     return encodeBytes(buf, obj);
   } else if (PyUnicode_Check(obj)) {
-
-#if PY_VERSION_HEX >= 0x03100000
-    HPy_ssize_t size;
-    const char *data = PyUnicode_AsUTF8AndSize(obj, &size);
-#else
-    HPy b = PyUnicode_AsUTF8String(obj);
-    HPy_ssize_t size = PyBytes_Size(b);
-    const char *data = PyBytes_AsString(b);
-#endif
-
-    returnIfError(bufferWriteLong(buf, size));
-    returnIfError(bufferWrite(buf, ":", 1));
-    return bufferWrite(buf, data, size);
+    return encodeStr(buf, obj);
   } else if (PyLong_Check(obj)) {
     long long val = PyLong_AsLongLong(obj);
 
@@ -215,56 +296,27 @@ static int encodeAny(struct buffer *buf, HPy obj) {
     return bufferWrite(buf, "e", 1);
 
   } else if (PyDict_Check(obj)) {
-    returnIfError(bufferWrite(buf, "d", 1));
-    HPy list = NULL;
-    HPy_ssize_t count = 0;
-    if (buildDictKeyList(obj, &list, &count)) {
-      return 1;
-    }
-
-    if (count == 0) {
-      return bufferWrite(buf, "e", 1);
-    }
-
-    for (HPy_ssize_t i = 0; i < count; i++) {
-      HPy keyValue = PyList_GetItem(list, i); // tuple[bytes, Any]
-
-      if (keyValue == NULL) {
-        runtimeError("failed to get key/value tuple from list");
-        return 1;
-      }
-
-      HPy key = PyTuple_GetItem(keyValue, 0);
-      Py_DecRef(keyValue);
-      if (key == NULL) {
-        runtimeError("can't get key from key,value tuple");
-        return 1;
-      }
-
-      if (encodeBytes(buf, key)) {
-        Py_DecRef(key);
-        return 1;
-      }
-
-      HPy value = PyTuple_GetItem(keyValue, 1);
-      if (value == NULL) {
-        runtimeError("can't get value");
-        return 1;
-      }
-
-      if (encodeAny(buf, value)) {
-        Py_DecRef(value);
-        return 1;
-      }
-    }
-
-    Py_DecRef(list);
-    return bufferWrite(buf, "e", 1);
+    return encodeDict(buf, obj);
   }
 
   HPy typ = PyObject_Type(obj);
 
-  PyErr_SetObject(BencodeEncodeError, PyUnicode_Format(PyUnicode_FromString(NON_SUPPORTED_TYPE_MESSAGE), typ));
+  if (typ == NULL) {
+    runtimeError("failed to get type of object");
+    return 1;
+  }
+
+  HPy ss = PyUnicode_Format(errTypeMessage, typ);
+  if (ss == NULL) {
+    Py_DecRef(typ);
+    runtimeError("failed to get type of object");
+    return 1;
+  }
+
+  PyErr_SetObject(PyExc_TypeError, ss);
+
+  Py_DecRef(ss);
+  Py_DecRef(typ);
 
   return 1;
 }

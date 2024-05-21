@@ -8,7 +8,7 @@ from bencode_c import BencodeEncodeError, bencode
 
 def test_exception_when_strict():
     invalid_obj = None
-    with pytest.raises(BencodeEncodeError):
+    with pytest.raises(TypeError):
         bencode(invalid_obj)
 
 
