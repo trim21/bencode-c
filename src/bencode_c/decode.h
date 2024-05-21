@@ -8,7 +8,7 @@ static inline PyObject *decodingError(const char *fmt, ...);
 static PyObject *decodeAny(const char *buf, Py_ssize_t *index, Py_ssize_t size);
 static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size);
 static PyObject *decodeBytes(const char *buf, Py_ssize_t *index, Py_ssize_t size);
-static PyObject *decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyObject *dict);
+static void decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyObject *dict);
 static PyObject *decodeList(const char *buf, Py_ssize_t *index, Py_ssize_t size);
 
 static PyObject *bdecode(PyObject *self, PyObject *b) {
@@ -154,7 +154,7 @@ static int strCompare(const char *s1, size_t len1, const char *s2, size_t len2) 
   }
 }
 
-static PyObject *decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyObject *d) {
+static void decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyObject *d) {
   *index = *index + 1;
   const char *lastKey = NULL;
   size_t lastKeyLen = 0;
@@ -163,13 +163,13 @@ static PyObject *decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size,
   while (buf[*index] != 'e') {
     PyObject *key = decodeBytes(buf, index, size);
     if (key == NULL) {
-      return NULL;
+      return;
     }
 
     PyObject *obj = decodeAny(buf, index, size);
     if (obj == NULL) {
       Py_DecRef(key);
-      return NULL;
+      return;
     }
     currentKeyLen = PyBytes_Size(key);
     currentKey = PyBytes_AsString(key);
@@ -177,18 +177,21 @@ static PyObject *decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size,
     if (lastKey != NULL) {
       int keyCmp = strCompare(currentKey, currentKeyLen, lastKey, lastKeyLen);
       if (keyCmp < 0) {
-        return decodingError("invalid dict, key not sorted. index %d", *index);
+        decodingError("invalid dict, key not sorted. index %d", *index);
+        return;
       }
       if (keyCmp == 0) {
-        return decodingError("invalid dict, find duplicated keys %.*s. index %d", currentKeyLen, currentKey, *index);
+        decodingError("invalid dict, find duplicated keys %.*s. index %d", currentKeyLen, currentKey, *index);
+        return;
       }
     }
     lastKey = currentKey;
     lastKeyLen = currentKeyLen;
     PyDict_SetItem(d, key, obj);
+    Py_DecRef(key);
+    Py_DecRef(obj);
   }
   *index = *index + 1;
-  return d;
 }
 
 static PyObject *decodeAny(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
@@ -207,13 +210,13 @@ static PyObject *decodeAny(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
   if (buf[*index] == 'd') {
     PyObject *dict = PyDict_New();
 
-    PyObject *r = decodeDict(buf, index, size, dict);
-    if (r == NULL) {
+    decodeDict(buf, index, size, dict);
+    if (dict == NULL) {
       Py_DecRef(dict);
       return NULL;
     }
 
-    return r;
+    return dict;
   }
 
   return decodingError("invalid bencode prefix '%c', index %d", buf[*index], *index);

@@ -10,11 +10,16 @@ static PyObject *BencodeEncodeError;
   "bencode only support bytes, str, int, list, tuple, dict and bool(encoded as 0/1, decoded as int)"
 
 #define defaultBufferSize 4096
+#define null NULL
 
-#define HPyLong_Check(obj) Py_TypeCheck(obj, PyLong_Type)
 #define returnIfError(o)                                                                                               \
   if (o) {                                                                                                             \
     return o;                                                                                                          \
+  }
+
+#define OperatorIF(err, op)                                                                                            \
+  if (!err) {                                                                                                          \
+    err |= op;                                                                                                         \
   }
 
 static HPy errTypeMessage;
@@ -65,7 +70,6 @@ static int bufferWrite(struct buffer *buf, const char *data, HPy_ssize_t size) {
 }
 
 static int bufferWriteLong(struct buffer *buf, long long val) {
-
   int j = snprintf(NULL, 0, "%lld", val) + 1;
   char *s = (char *)malloc(sizeof(char) * j);
   snprintf(s, j, "%lld", val);
@@ -132,6 +136,7 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
 
     PyList_Append(*list, tu);
     Py_DecRef(tu);
+    Py_DecRef(key);
   }
 
   Py_DecRef(keys);
@@ -154,8 +159,6 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
     if (lastKey != NULL) {
       if (lastKeylen == currentKeylen) {
         if (strncmp(lastKey, currentKey, lastKeylen) == 0) {
-          // Py_DecRef(keyValue);
-          // Py_DecRef(key);
           bencodeError("find duplicated keys with str and bytes in dict");
           return 1;
         }
@@ -164,9 +167,6 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
 
     lastKey = currentKey;
     lastKeylen = currentKeylen;
-
-    // Py_DecRef(keyValue);
-    // Py_DecRef(key);
   }
 
   return 0;
@@ -179,10 +179,14 @@ static int encodeStr(struct buffer *buf, HPy obj) {
   HPy_ssize_t size = PyBytes_Size(b);
 
   const char *data = PyBytes_AsString(b);
+  if (data == null) {
+    Py_DecRef(b);
+    return 1;
+  }
 
   int err = bufferWriteLong(buf, size);
-  err |= bufferWrite(buf, ":", 1);
-  err |= bufferWrite(buf, data, size);
+  OperatorIF(err, bufferWrite(buf, ":", 1));
+  OperatorIF(err, bufferWrite(buf, data, size));
 
   Py_DecRef(b);
 
@@ -250,57 +254,77 @@ static int encodeDict(struct buffer *buf, HPy obj) {
   return bufferWrite(buf, "e", 1);
 }
 
+static int encodeInt(struct buffer *buf, HPy obj) {
+  long long val = PyLong_AsLongLong(obj);
+  if (PyErr_Occurred()) { // python int may overflow c long long.
+    return 1;
+  }
+
+  returnIfError(bufferWrite(buf, "i", 1));
+  returnIfError(bufferWriteLong(buf, val));
+  return bufferWrite(buf, "e", 1);
+}
+
+static int encodeList(struct buffer *buf, HPy obj) {
+  HPy_ssize_t len = PyList_Size(obj);
+  returnIfError(bufferWrite(buf, "l", 1));
+
+  for (HPy_ssize_t i = 0; i < len; i++) {
+    HPy o = PyList_GetItem(obj, i);
+    returnIfError(encodeAny(buf, o));
+  }
+
+  return bufferWrite(buf, "e", 1);
+}
+
+static int encodeTuple(struct buffer *buf, HPy obj) {
+  HPy_ssize_t len = PyTuple_Size(obj);
+  returnIfError(bufferWrite(buf, "l", 1));
+
+  for (HPy_ssize_t i = 0; i < len; i++) {
+    HPy o = PyTuple_GetItem(obj, i);
+    returnIfError(encodeAny(buf, o));
+  }
+
+  return bufferWrite(buf, "e", 1);
+}
+
 static int encodeAny(struct buffer *buf, HPy obj) {
   if (Py_True == obj) {
     return bufferWrite(buf, "i1e", 3);
-  } else if (Py_False == obj) {
+  }
+
+  if (Py_False == obj) {
     return bufferWrite(buf, "i0e", 3);
-  } else if (PyBytes_Check(obj)) {
+  }
+
+  if (PyBytes_Check(obj)) {
     return encodeBytes(buf, obj);
-  } else if (PyUnicode_Check(obj)) {
+  }
+
+  if (PyUnicode_Check(obj)) {
     return encodeStr(buf, obj);
-  } else if (PyLong_Check(obj)) {
-    long long val = PyLong_AsLongLong(obj);
+  }
 
-    // python int may overflow c long long
-    if (PyErr_Occurred()) {
-      return 1;
-    }
+  if (PyLong_Check(obj)) {
+    return encodeInt(buf, obj);
+  }
 
-    returnIfError(bufferWrite(buf, "i", 1));
-    returnIfError(bufferWriteLong(buf, val));
-    return bufferWrite(buf, "e", 1);
-  } else if (PyList_Check(obj)) {
-    HPy_ssize_t len = PyList_Size(obj);
-    returnIfError(bufferWrite(buf, "l", 1));
-    if (len == 0) {
-      return bufferWrite(buf, "e", 1);
-    }
+  if (PyList_Check(obj)) {
+    return encodeList(buf, obj);
+  }
 
-    for (HPy_ssize_t i = 0; i < len; i++) {
-      HPy o = PyList_GetItem(obj, i);
-      returnIfError(encodeAny(buf, o));
-    }
-    return bufferWrite(buf, "e", 1);
-  } else if (PyTuple_Check(obj)) {
-    HPy_ssize_t len = PyTuple_Size(obj);
-    returnIfError(bufferWrite(buf, "l", 1));
-    if (len == 0) {
-      return bufferWrite(buf, "e", 1);
-    }
+  if (PyTuple_Check(obj)) {
+    return encodeTuple(buf, obj);
+  }
 
-    for (HPy_ssize_t i = 0; i < len; i++) {
-      HPy o = PyTuple_GetItem(obj, i);
-      returnIfError(encodeAny(buf, o));
-    }
-    return bufferWrite(buf, "e", 1);
-
-  } else if (PyDict_Check(obj)) {
+  if (PyDict_Check(obj)) {
     return encodeDict(buf, obj);
   }
 
-  HPy typ = PyObject_Type(obj);
+  // Unsupported type, raise TypeError
 
+  HPy typ = PyObject_Type(obj);
   if (typ == NULL) {
     runtimeError("failed to get type of object");
     return 1;
@@ -321,14 +345,13 @@ static int encodeAny(struct buffer *buf, HPy obj) {
   return 1;
 }
 
-static HPy bencode(HPy self, HPy obj) {
-  // self is the module object
-
+// mod is the module object
+static HPy bencode(HPy mod, HPy obj) {
   struct buffer *buf = newBuffer();
 
+  // error when encoding
   if (encodeAny(buf, obj)) {
     freeBuffer(buf);
-    // error when encoding
     return NULL;
   }
 
