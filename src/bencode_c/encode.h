@@ -88,6 +88,11 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
 
   *count = PyObject_Length(keys);
 
+  if (*count == 0) {
+    Py_DecRef(keys);
+    return 0;
+  }
+
   *list = PyList_New(0);
 
   for (HPy_ssize_t i = 0; i < *count; i++) {
@@ -110,6 +115,8 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
 
     PyList_Append(*list, tu);
   }
+
+  Py_DecRef(keys);
 
   if (PyObject_CallMethod(*list, "sort", NULL) == NULL) {
     return 1;
@@ -185,6 +192,9 @@ static int encodeAny(struct buffer *buf, HPy obj) {
   } else if (PyList_Check(obj)) {
     HPy_ssize_t len = PyList_Size(obj);
     returnIfError(bufferWrite(buf, "l", 1));
+    if (len == 0) {
+      return bufferWrite(buf, "e", 1);
+    }
 
     for (HPy_ssize_t i = 0; i < len; i++) {
       HPy o = PyList_GetItem(obj, i);
@@ -194,6 +204,9 @@ static int encodeAny(struct buffer *buf, HPy obj) {
   } else if (PyTuple_Check(obj)) {
     HPy_ssize_t len = PyTuple_Size(obj);
     returnIfError(bufferWrite(buf, "l", 1));
+    if (len == 0) {
+      return bufferWrite(buf, "e", 1);
+    }
 
     for (HPy_ssize_t i = 0; i < len; i++) {
       HPy o = PyTuple_GetItem(obj, i);
@@ -209,33 +222,40 @@ static int encodeAny(struct buffer *buf, HPy obj) {
       return 1;
     }
 
+    if (count == 0) {
+      return bufferWrite(buf, "e", 1);
+    }
+
     for (HPy_ssize_t i = 0; i < count; i++) {
       HPy keyValue = PyList_GetItem(list, i); // tuple[bytes, Any]
+
       if (keyValue == NULL) {
         runtimeError("failed to get key/value tuple from list");
         return 1;
       }
+
       HPy key = PyTuple_GetItem(keyValue, 0);
-      HPy value = PyTuple_GetItem(keyValue, 1);
+      Py_DecRef(keyValue);
       if (key == NULL) {
         runtimeError("can't get key from key,value tuple");
         return 1;
       }
+
+      if (encodeBytes(buf, key)) {
+        Py_DecRef(key);
+        return 1;
+      }
+
+      HPy value = PyTuple_GetItem(keyValue, 1);
       if (value == NULL) {
         runtimeError("can't get value");
         return 1;
       }
-      if (encodeBytes(buf, key)) {
-        Py_DecRef(list);
-        return 1;
-      }
-      if (encodeAny(buf, value)) {
-        Py_DecRef(list);
-        return 1;
-      }
 
-      Py_DecRef(key);
-      Py_DecRef(value);
+      if (encodeAny(buf, value)) {
+        Py_DecRef(value);
+        return 1;
+      }
     }
 
     Py_DecRef(list);
@@ -253,11 +273,9 @@ static HPy bencode(HPy self, HPy obj) {
   // self is the module object
 
   struct buffer *buf = newBuffer();
-  Py_IncRef(obj);
 
   if (encodeAny(buf, obj)) {
     freeBuffer(buf);
-    Py_DecRef(obj);
     // error when encoding
     return NULL;
   }
@@ -265,7 +283,6 @@ static HPy bencode(HPy self, HPy obj) {
   HPy res = PyBytes_FromStringAndSize(buf->buf, buf->len);
 
   freeBuffer(buf);
-  Py_DecRef(obj);
 
   return res;
 };

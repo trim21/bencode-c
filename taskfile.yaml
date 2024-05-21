@@ -12,6 +12,17 @@ tasks:
       - 'git commit -m "bump: {{.VERSION}}"'
       - 'git tag "v{{.VERSION}}" -m "v{{.VERSION}}"'
 
+  dev:build:
+    sources:
+      - src/**/*.c
+      - src/**/*.h
+    generates:
+      - src/**/*.so
+      - src/**/*.pyd
+    cmds:
+      - cmd: python setup.py build_ext --force --inplace
+        silent: true
+
   dev:
     sources:
       - src/**/*.c

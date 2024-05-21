@@ -2,17 +2,44 @@
 
 static PyObject *BencodeDecodeError;
 
-static PyObject *decode_any(const char *buf, HPy_ssize_t *index, HPy_ssize_t size);
+static inline PyObject *decodeError(const char *fmt, ...);
+static PyObject *decode_any(const char *buf, Py_ssize_t *index, Py_ssize_t size);
+static PyObject *decode_int(const char *buf, Py_ssize_t *index, Py_ssize_t size);
+static PyObject *decode_bytes(const char *buf, Py_ssize_t *index, Py_ssize_t size);
+static PyObject *decode_dict(const char *buf, Py_ssize_t *index, Py_ssize_t size);
+static PyObject *decode_list(const char *buf, Py_ssize_t *index, Py_ssize_t size);
 
-static inline HPy decodeError(const char *fmt, ...) {
+static PyObject *bdecode(PyObject *self, PyObject *b) {
+  if (!PyBytes_Check(b)) {
+    PyErr_SetString(PyExc_TypeError, "can only decode bytes");
+    return NULL;
+  }
+
+  Py_ssize_t size = PyBytes_Size(b);
+  const char *buf = PyBytes_AsString(b);
+
+  Py_ssize_t index = 0;
+
+  PyObject *r = decode_any(buf, &index, size);
+
+  if (index != size) {
+    return decodeError("invalid bencode data, index %d", index);
+  }
+
+  // return Py_BuildValue("");
+  return r;
+  // return Py_None;
+}
+
+static inline PyObject *decodeError(const char *fmt, ...) {
   PyErr_SetObject(BencodeDecodeError, PyUnicode_FromFormat(fmt));
   return NULL;
 }
 
-static HPy decode_int(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
-  HPy_ssize_t index_e = 0;
+static PyObject *decode_int(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
+  Py_ssize_t index_e = 0;
 
-  for (HPy_ssize_t i = *index; i < size; i++) {
+  for (Py_ssize_t i = *index; i < size; i++) {
     if (buf[i] == 'e') {
       index_e = i;
       break;
@@ -39,7 +66,7 @@ static HPy decode_int(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
   }
 
   long long val = 0;
-  for (HPy_ssize_t i = *index; i < index_e; i++) {
+  for (Py_ssize_t i = *index; i < index_e; i++) {
     if (buf[i] > '9' || buf[i] < '0') {
       return decodeError("invalid int, '%c' found at %d", buf[i], i);
     }
@@ -53,9 +80,9 @@ static HPy decode_int(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
 }
 
 // // there is no bytes/str in bencode, they only have 1 type for both of them.
-static HPy decode_str(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
-  HPy_ssize_t index_sep = 0;
-  for (HPy_ssize_t i = *index; i < size; i++) {
+static PyObject *decode_bytes(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
+  Py_ssize_t index_sep = 0;
+  for (Py_ssize_t i = *index; i < size; i++) {
     if (buf[i] == ':') {
       index_sep = i;
       break;
@@ -70,8 +97,8 @@ static HPy decode_str(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
     return decodeError("invalid bytes length, found at %d", *index);
   }
 
-  HPy_ssize_t len = 0;
-  for (HPy_ssize_t i = *index; i < index_sep; i++) {
+  Py_ssize_t len = 0;
+  for (Py_ssize_t i = *index; i < index_sep; i++) {
     if (buf[i] < '0' || buf[i] > '9') {
       return decodeError("invalid bytes length, found '%c' at %d", buf[i], i);
     }
@@ -87,18 +114,20 @@ static HPy decode_str(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
   return PyBytes_FromStringAndSize(&buf[index_sep + 1], len);
 }
 
-static HPy decode_list(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
+static PyObject *decode_list(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
   *index = *index + 1;
 
-  HPy l = PyList_New(0);
+  PyObject *l = PyList_New(0);
 
   while (buf[*index] != 'e') {
-    HPy obj = decode_any(buf, index, size);
+    PyObject *obj = decode_any(buf, index, size);
     if (obj == NULL) {
       return NULL;
     }
 
     PyList_Append(l, obj);
+
+    Py_DecRef(obj);
   }
 
   *index = *index + 1;
@@ -124,20 +153,20 @@ static int strCompare(const char *s1, size_t len1, const char *s2, size_t len2) 
   }
 }
 
-static HPy decode_dict(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
+static PyObject *decode_dict(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
   *index = *index + 1;
-  HPy d = PyDict_New();
+  PyObject *d = PyDict_New();
   const char *lastKey = NULL;
   size_t lastKeyLen = 0;
   const char *currentKey;
   size_t currentKeyLen;
   while (buf[*index] != 'e') {
-    HPy key = decode_str(buf, index, size);
+    PyObject *key = decode_bytes(buf, index, size);
     if (key == NULL) {
       return NULL;
     }
 
-    HPy obj = decode_any(buf, index, size);
+    PyObject *obj = decode_any(buf, index, size);
     if (obj == NULL) {
       return NULL;
     }
@@ -152,18 +181,20 @@ static HPy decode_dict(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
     lastKey = currentKey;
     lastKeyLen = currentKeyLen;
     PyDict_SetItem(d, key, obj);
+    Py_DecRef(key);
+    Py_DecRef(obj);
   }
   *index = *index + 1;
   return d;
 }
 
-static PyObject *decode_any(const char *buf, HPy_ssize_t *index, HPy_ssize_t size) {
+static PyObject *decode_any(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
   // int
   if (buf[*index] == 'i') {
     return decode_int(buf, index, size);
   }
   if (buf[*index] >= '0' && buf[*index] <= '9') {
-    return decode_str(buf, index, size);
+    return decode_bytes(buf, index, size);
   }
   // // list
   if (buf[*index] == 'l') {
@@ -175,25 +206,4 @@ static PyObject *decode_any(const char *buf, HPy_ssize_t *index, HPy_ssize_t siz
   }
 
   return decodeError("invalid bencode prefix '%c', index %d", buf[*index], *index);
-}
-
-static PyObject *bdecode(PyObject *self, PyObject *b) {
-  if (!PyBytes_Check(b)) {
-    PyErr_SetString(PyExc_TypeError, "can only decode bytes");
-    return NULL;
-  }
-
-  HPy_ssize_t size = PyBytes_Size(b);
-  const char *buf = PyBytes_AsString(b);
-
-  HPy_ssize_t index = 0;
-
-  PyObject *r = decode_any(buf, &index, size);
-
-  if (index != size) {
-    Py_DecRef(r);
-    return decodeError("invalid bencode data, index %d", index);
-  }
-
-  return r;
 }
