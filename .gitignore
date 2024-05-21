@@ -22,6 +22,6 @@ dist/
 *.egg-info/
 
 # Added by cargo
-
+a.py
 /target
 /data/
