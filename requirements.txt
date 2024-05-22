@@ -1,0 +1,7 @@
+-e .
+
+# testing
+pytest==8.2.1
+pytest-github-actions-annotate-failures==0.2.0
+# build check
+abi3audit

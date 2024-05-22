@@ -39,7 +39,5 @@ tasks:
       CFLAGS: "-O0 -g"
       # LD_PRELOAD: libclang_rt.asan.so
     cmds:
-      - cmd: python setup.py build_ext --force --inplace
-        silent: true
-      - PYTHONPATH=src python -X faulthandler a.py
-#      - pytest -x -v -s
+      - task: dev:build
+      - pytest -x -v -s

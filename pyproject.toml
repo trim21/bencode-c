@@ -31,11 +31,5 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
 ]
 
-[project.optional-dependencies]
-testing = [
-    'pytest==8.2.1',
-    "pytest-github-actions-annotate-failures==0.2.0",
-]
-
 [tool.pytest.ini_options]
 pythonpath = ['src']
