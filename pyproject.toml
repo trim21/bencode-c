@@ -33,7 +33,7 @@ classifiers = [
 
 [project.optional-dependencies]
 testing = [
-    'pytest==8.2.0',
+    'pytest==8.2.1',
     "pytest-github-actions-annotate-failures==0.2.0",
 ]
 
