@@ -3,25 +3,34 @@
 
 #include "common.h"
 
-static PyObject *BencodeEncodeError;
-
-#define NON_SUPPORTED_TYPE_MESSAGE                                                                                     \
-  "invalid type '%s', "                                                                                                \
-  "bencode only support bytes, str, int, list, tuple, dict and bool(encoded as 0/1, decoded as int)"
-
 #define defaultBufferSize 4096
 
-#define returnIfError(o)                                                                                               \
-  if (o) {                                                                                                             \
-    return o;                                                                                                          \
+#define returnIfError(o)                                                                           \
+  if (o) {                                                                                         \
+    return o;                                                                                      \
   }
 
-#define OperatorIF(err, op)                                                                                            \
-  if (!err) {                                                                                                          \
-    err |= op;                                                                                                         \
+#define OperatorIF(err, op)                                                                        \
+  if (!err) {                                                                                      \
+    err |= op;                                                                                     \
   }
 
-static HPy errTypeMessage;
+static HPy bencode(HPy mod, HPy obj);
+
+// module level variable
+PyObject *BencodeEncodeError;
+PyDoc_STRVAR(__bencode_doc__, "bencode(v: Any, /) -> bytes\n"
+                              "--\n\n"
+                              "encode python object to bytes");
+PyMethodDef encodeImpl = {
+    .ml_name = "bencode",
+    .ml_meth = bencode,
+    .ml_flags = METH_O,
+    .ml_doc = __bencode_doc__,
+};
+// module level variable
+
+HPy errTypeMessage;
 
 static inline void runtimeError(const char *data) { PyErr_SetString(PyExc_RuntimeError, data); }
 

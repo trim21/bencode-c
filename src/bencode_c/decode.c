@@ -1,9 +1,21 @@
 #include "common.h"
-#include "object.h"
 
-static PyObject *BencodeDecodeError;
+static HPy bdecode(HPy mod, HPy obj);
 
-static inline PyObject *decodingError(const char *fmt, ...);
+// module level variable
+PyObject *BencodeDecodeError;
+PyDoc_STRVAR(__bdecode_doc__, "bdecode(b: bytes, /) -> Any\n"
+                              "--\n\n"
+                              "decode bytes to python object");
+PyMethodDef decodeImpl = {
+    .ml_name = "bdecode",
+    .ml_meth = bdecode,
+    .ml_flags = METH_O,
+    .ml_doc = __bdecode_doc__,
+};
+// module level variable
+
+static inline PyObject *decodingError(const char *format, ...);
 
 static PyObject *decodeAny(const char *buf, Py_ssize_t *index, Py_ssize_t size);
 static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size);
@@ -31,8 +43,8 @@ static PyObject *bdecode(PyObject *self, PyObject *b) {
   return r;
 }
 
-static inline PyObject *decodingError(const char *fmt, ...) {
-  PyErr_SetObject(BencodeDecodeError, PyUnicode_FromFormat(fmt));
+static inline PyObject *decodingError(const char *format, ...) {
+  PyErr_SetObject(BencodeDecodeError, PyUnicode_FromFormat(format));
   return NULL;
 }
 
@@ -61,7 +73,8 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
     *index = *index + 1;
   } else if (buf[*index] == '0') {
     if (*index + 1 != index_e) {
-      return decodingError("invalid int, non-zero int should not start with '0'. found at %d", *index);
+      return decodingError("invalid int, non-zero int should not start with '0'. found at %d",
+                           *index);
     }
   }
 
@@ -181,7 +194,8 @@ static void decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyOb
         return;
       }
       if (keyCmp == 0) {
-        decodingError("invalid dict, find duplicated keys %.*s. index %d", currentKeyLen, currentKey, *index);
+        decodingError("invalid dict, find duplicated keys %.*s. index %d", currentKeyLen,
+                      currentKey, *index);
         return;
       }
     }

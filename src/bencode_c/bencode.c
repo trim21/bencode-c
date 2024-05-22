@@ -1,26 +1,35 @@
-#define Py_LIMITED_API 0x03070000
+#include "common.h"
 
-// TODO: should use a extern here
-#include "decode.h"
-#include "encode.h"
+extern HPy errTypeMessage;
+extern PyMethodDef encodeImpl;
+extern HPy BencodeEncodeError;
 
-static PyMethodDef DemoMethods[] = {
-    {"bencode", bencode, METH_O, "encode python object to bytes"},
-    {"bdecode", bdecode, METH_O, "decode bytes to python object"},
-    {NULL, NULL, 0, NULL},
-};
+extern PyMethodDef decodeImpl;
+extern HPy BencodeDecodeError;
 
-static PyModuleDef moduleDef = {
-    PyModuleDef_HEAD_INIT, "_bencode", "Point module (Step 0; C API implementation)", -1, DemoMethods,
+PyModuleDef moduleDef = {
+    .m_base = PyModuleDef_HEAD_INIT,
+    .m_name = "_bencode",
+    .m_doc = "bit-torrent bencode library",
+    .m_size = -1,
 };
 
 PyMODINIT_FUNC PyInit__bencode(void) {
   PyObject *m = PyModule_Create(&moduleDef);
-  if (m == NULL)
+  if (m == NULL) {
     return NULL;
+  }
+
+  if (PyModule_AddFunctions(m, &encodeImpl)) {
+    return NULL;
+  }
+  if (PyModule_AddFunctions(m, &decodeImpl)) {
+    return NULL;
+  }
 
   errTypeMessage = PyUnicode_FromString(NON_SUPPORTED_TYPE_MESSAGE);
-  if(errTypeMessage == NULL) {
+  Py_XINCREF(errTypeMessage);
+  if (errTypeMessage == NULL) {
     Py_DECREF(m);
     return NULL;
   }
@@ -42,5 +51,6 @@ PyMODINIT_FUNC PyInit__bencode(void) {
     Py_DECREF(m);
     return NULL;
   }
+  ///
   return m;
 }
