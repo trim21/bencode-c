@@ -1,6 +1,6 @@
 #ifndef MY_COMMON_H
 
-#define Py_LIMITED_API 0x03070000
+#define Py_LIMITED_API 0x03080000
 #include <Python.h>
 
 #define HPy_ssize_t Py_ssize_t

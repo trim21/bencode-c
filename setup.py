@@ -1,4 +1,3 @@
-import sys
 from glob import glob
 
 from setuptools import setup, Extension, find_packages
@@ -14,6 +13,6 @@ setup(
     ext_modules=[module],
     packages=find_packages("src"),
     package_dir={"": "src"},
-    package_data={"": ["*.h", '*.c', '*.pyi', 'py.typed']},  # <- This line
-    options={'bdist_wheel': {'py_limited_api': f'cp3{sys.version_info[1]}'}},
+    package_data={"": ["*.h", "*.c", "*.pyi", "py.typed"]},
+    options={"bdist_wheel": {"py_limited_api": "cp38"}},
 )
