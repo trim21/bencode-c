@@ -12,6 +12,9 @@ tasks:
       - 'git commit -m "bump: {{.VERSION}}"'
       - 'git tag "v{{.VERSION}}" -m "v{{.VERSION}}"'
 
+  c-fmt:
+    cmd: clang-format -i src/bencode_c/*.c src/bencode_c/*.h
+
   dev:build:
     sources:
       - src/**/*.c

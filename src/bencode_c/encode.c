@@ -3,7 +3,6 @@
 
 #include "buffer.h"
 #include "common.h"
-#include "str.h"
 
 #define returnIfError(o)                                                                           \
   if (o)                                                                                           \
@@ -129,33 +128,26 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
   return 0;
 }
 
+static int encodeBytes(struct Buffer *buf, HPy obj) {
+  const char *data = PyBytes_AsString(obj);
+  if (data == NULL) {
+    return 1;
+  }
+
+  HPy_ssize_t size = PyBytes_Size(obj);
+
+  int err = bufferWriteFormat(buf, "%lld", size);
+  err = err || bufferWriteChar(buf, ':');
+  return err || bufferWrite(buf, data, size);
+}
+
 // TODO: use PyUnicode_AsUTF8AndSize after 3.10
 static int encodeStr(struct Buffer *buf, HPy obj) {
   HPy b = PyUnicode_AsUTF8String(obj);
 
-  HPy_ssize_t size = PyBytes_Size(b);
-  const char *data = PyBytes_AsString(b);
-  if (data == NULL) {
-    Py_DecRef(b);
-    return 1;
-  }
-
-  int err = bufferWriteSize_t(buf, size);
-  err = err || bufferWrite(buf, ":", 1);
-  err = err || bufferWrite(buf, data, size);
-
+  int err = encodeBytes(buf, b);
   Py_DecRef(b);
-
   return err;
-}
-
-static int encodeBytes(struct Buffer *buf, HPy obj) {
-  HPy_ssize_t size = PyBytes_Size(obj);
-  const char *data = PyBytes_AsString(obj);
-
-  int err = bufferWriteSize_t(buf, size);
-  err = err || bufferWrite(buf, ":", 1);
-  return err || bufferWrite(buf, data, size);
 }
 
 static int encodeDict(struct Buffer *buf, HPy obj) {
@@ -361,7 +353,7 @@ static HPy bencode(HPy mod, HPy obj) {
     return NULL;
   }
 
-  HPy res = PyBytes_FromStringAndSize(buf.buf, buf.len);
+  HPy res = PyBytes_FromStringAndSize(buf.buf, buf.index);
 
   freeBuffer(buf);
 

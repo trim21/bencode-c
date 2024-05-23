@@ -7,9 +7,12 @@
 
 struct Buffer {
   char *buf;
-  size_t len;
+  size_t index;
   size_t cap;
 };
+
+static int bufferWriteFormat(struct Buffer *buf, char *format, ...)
+    __attribute__((format(printf, 2, 3)));
 
 static struct Buffer newBuffer(int *res) {
   struct Buffer b = {};
@@ -21,53 +24,77 @@ static struct Buffer newBuffer(int *res) {
     return b;
   }
 
-  b.len = 0;
+  b.index = 0;
   b.cap = defaultBufferSize;
 
   return b;
 }
 
-static int bufferWrite(struct Buffer *buf, const char *data, HPy_ssize_t size) {
-  void *tmp;
-
-  if (size + buf->len >= buf->cap) {
-    tmp = realloc(buf->buf, buf->cap * 2 + size);
+static int bufferGrow(struct Buffer *buf, HPy_ssize_t size) {
+  if (size + buf->index + 1 >= buf->cap) {
+    void *tmp = realloc(buf->buf, buf->cap * 2 + size);
     if (tmp == NULL) {
-      PyErr_SetNone(PyExc_MemoryError);
+      PyErr_SetString(PyExc_MemoryError, "failed to grow buffer");
       return 1;
     }
     buf->cap = buf->cap * 2 + size;
     buf->buf = (char *)tmp;
   }
 
-  memcpy(buf->buf + buf->len, data, size);
+  return 0;
+}
 
-  buf->len = buf->len + size;
+static int bufferWrite(struct Buffer *buf, const char *data, HPy_ssize_t size) {
+  if (bufferGrow(buf, size)) {
+    return 1;
+  }
+
+  memcpy(buf->buf + buf->index, data, size);
+
+  buf->index = buf->index + size;
 
   return 0;
 }
 
-static int bufferWriteSize_t(struct Buffer *buf, HPy_ssize_t val) {
-  struct Str s = {};
-
-  if (str_printf(&s, "%d", val)) {
+static int bufferWriteChar(struct Buffer *buf, const char c) {
+  if (bufferGrow(buf, 1)) {
     return 1;
   }
-
-  int r = bufferWrite(buf, s.str, s.size);
-  free(s.str);
-  return r;
+  buf->buf[buf->index] = c;
+  buf->index = buf->index + 1;
+  return 0;
 }
 
-static int bufferWriteLongLong(struct Buffer *buf, long long val) {
-  struct Str s = {};
-  if (str_printf(&s, "%lld", val)) {
+static int bufferWriteFormat(struct Buffer *buf, char *format, ...) {
+  va_list args, args2;
+
+  va_start(args, format);
+  va_copy(args2, args);
+  Py_ssize_t size = vsnprintf(NULL, 0, format, args);
+
+  if (bufferGrow(buf, size + 1)) {
+    va_end(args);
+    va_end(args2);
     return 1;
   }
 
-  int r = bufferWrite(buf, s.str, s.size);
-  free(s.str);
-  return r;
+  size = vsnprintf(&buf->buf[buf->index], size + 1, format, args2);
+  if (size < 0) {
+    va_end(args);
+    va_end(args2);
+    PyErr_SetString(PyExc_RuntimeError, "vsnprintf return unexpected value");
+    return 1;
+  }
+  va_end(args);
+  va_end(args2);
+
+  buf->index += size;
+
+  return 0;
+}
+
+static inline int bufferWriteLongLong(struct Buffer *buf, long long val) {
+  return bufferWriteFormat(buf, "%lld", val);
 }
 
 static void freeBuffer(struct Buffer buf) { free(buf.buf); }

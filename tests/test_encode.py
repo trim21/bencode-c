@@ -16,6 +16,9 @@ def test_encode_str():
     s = "你好"
     assert bencode(s) == "{}:".format(len(s.encode())).encode() + s.encode(), "utf8"
 
+    s = "你好" * 4
+    assert bencode(s) == "{}:".format(len(s.encode())).encode() + s.encode(), "utf8"
+
     coded = bencode("ThisIsAString")
     assert coded == b"13:ThisIsAString", "Failed to encode string from str."
 
