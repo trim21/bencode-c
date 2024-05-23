@@ -2,8 +2,8 @@
 #include <string.h>
 
 #include "buffer.h"
-#include "str.h"
 #include "common.h"
+#include "str.h"
 
 #define returnIfError(o)                                                                           \
   if (o)                                                                                           \

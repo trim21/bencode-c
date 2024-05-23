@@ -27,7 +27,6 @@ static inline PyObject *formatError(HPy err, const char *format, ...) {
   struct Str s;
   if (va_str_printf(&s, format, args)) {
     va_end(args);
-    //    PyErr_SetString(PyExc_MemoryError, "failed to format string");
     return NULL;
   }
   va_end(args);
@@ -71,8 +70,6 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
   //  ^ index
   *index = *index + 1;
 
-  Py_ssize_t numStart = *index;
-
   if (buf[*index] == '-') {
     if (buf[*index + 1] == '0') {
       decodingError("invalid int, '-0' found at %zd", *index);
@@ -80,24 +77,9 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
     }
 
     sign = -1;
-    numStart++;
   } else if (buf[*index] == '0') {
     if (*index + 1 != index_e) {
       decodingError("invalid int, non-zero int should not start with '0'. found at %zd", *index);
-      return NULL;
-    }
-  }
-
-  // i1234e
-  //  ^ numStart
-  // i-1234e
-  //   ^ numStart
-  //  ^ index
-
-  for (Py_ssize_t i = numStart; i < index_e; i++) {
-    char c = buf[i];
-    if (c < '0' || c > '9') {
-      decodingError("invalid int, '%c' found at %zd", c, i);
       return NULL;
     }
   }
@@ -106,6 +88,11 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
     unsigned long long val = 0;
     for (Py_ssize_t i = *index; i < index_e; i++) {
       char c = buf[i] - '0';
+      if (c < 0 || c > 9) {
+        decodingError("invalid int, '%c' found at %zd", c, i);
+        return NULL;
+      }
+
       // val = val * 10 + (buf[i] - '0')
       // but with overflow check
 
@@ -125,6 +112,10 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
     int of;
     for (Py_ssize_t i = *index + 1; i < index_e; i++) {
       char c = buf[i] - '0';
+      if (c < 0 || c > 9) {
+        decodingError("invalid int, '%c' found at %zd", c, i);
+        return NULL;
+      }
 
       of = _i128_mul_overflow(val, 10, &val);
       of = of || _i128_add_overflow(val, c, &val);
@@ -143,7 +134,6 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
   }
 
   // i1234e
-  //  ^ index
   // i-1234e
   //  ^ index
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "str.h"
 #include "common.h"
+#include "str.h"
 
 #define defaultBufferSize 4096
 
