@@ -26,7 +26,7 @@ compared packages:
 - `cy`: cython implement [fast-bencode](https://pypi.org/project/fast-bencode)
 - `mypy`: pure python implement with mypyc [bencode2](https://pypi.org/project/bencode2)
 
-test cases are 20 torrents from real world.
+test cases are 40 torrents from real world.
 
 (windows, python3.10 AMD R7 5800X)
 
