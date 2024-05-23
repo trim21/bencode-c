@@ -11,8 +11,12 @@ struct Buffer {
   size_t cap;
 };
 
-static int bufferWriteFormat(struct Buffer *buf, char *format, ...)
+#ifdef _MSC_VER
+static int bufferWriteFormat(struct Buffer *buf, _Printf_format_string_ const char *format, ...);
+#else
+static int bufferWriteFormat(struct Buffer *buf, const char *format, ...)
     __attribute__((format(printf, 2, 3)));
+#endif
 
 static struct Buffer newBuffer(int *res) {
   struct Buffer b = {};
@@ -65,7 +69,7 @@ static int bufferWriteChar(struct Buffer *buf, const char c) {
   return 0;
 }
 
-static int bufferWriteFormat(struct Buffer *buf, char *format, ...) {
+static int bufferWriteFormat(struct Buffer *buf, const char *format, ...) {
   va_list args, args2;
 
   va_start(args, format);

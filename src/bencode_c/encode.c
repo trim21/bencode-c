@@ -136,7 +136,7 @@ static int encodeBytes(struct Buffer *buf, HPy obj) {
 
   HPy_ssize_t size = PyBytes_Size(obj);
 
-  int err = bufferWriteFormat(buf, "%lld", size);
+  int err = bufferWriteFormat(buf, "%zd", size);
   err = err || bufferWriteChar(buf, ':');
   return err || bufferWrite(buf, data, size);
 }
