@@ -13,20 +13,34 @@ def test_non_bytes_input():
         bdecode(1)  # type: ignore
 
 
-def test_decode_int():
-    assert bdecode(b"i1e") == 1
-    assert bdecode(b"i-123e") == -123
-    assert 20022 == bdecode(b"i20022e")
-    assert bdecode(b"i0e") == 0
+@pytest.mark.parametrize(
+    ["raw", "expected"],
+    [
+        (b"i0e", 0),
+        (b"i1e", 1),
+        (b"i-123e", -123),
+        (b"i20022e", 20022),
+        (b"i-20022e", -20022),
+    ],
+)
+def test_decode_int(raw, expected):
+    assert bdecode(raw) == expected
 
-    with pytest.raises(BencodeDecodeError):
-        assert bdecode(b"i-0e")
 
+@pytest.mark.parametrize(
+    "raw",
+    [
+        b"i-0e",
+        b"i-01e",
+        b"i01e",
+        b"i01",
+        b"ie",
+        b"i",
+    ],
+)
+def test_decode_int_throw(raw):
     with pytest.raises(BencodeDecodeError):
-        assert bdecode(b"i-01e")
-
-    with pytest.raises(BencodeDecodeError):
-        assert bdecode(b"i01e")
+        bdecode(raw)
 
 
 def test_decode_str():
@@ -84,8 +98,11 @@ def test_list(raw: bytes, expected: Any):
         (b"0:", b""),
         (b"4:spam", b"spam"),
         (b"i-3e", -3),
-        # (b"i9223372036854775808e", 9223372036854775808),  # longlong int +1
-        # (b"i18446744073709551616e", 18446744073709551616),  # unsigned long long +1
+        (b"i9223372036854775808e", 9223372036854775808),  # longlong int +1
+        (b"i18446744073709551616e", 18446744073709551616),  # unsigned long long +1
+        # long long int range -9223372036854775808, 9223372036854775807
+        (b"i-9223372036854775808e", -9223372036854775808),
+        (b"i9223372036854775808e", 9223372036854775808),
         (b"le", []),
         (b"l4:spam4:eggse", [b"spam", b"eggs"]),
         # (b"de", {}),
@@ -107,6 +124,8 @@ def test_decode1():
     }
 
 
+#
+#
 # @pytest.mark.parametrize(
 #     ["raw", "expected"],
 #     [

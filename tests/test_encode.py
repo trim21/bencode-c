@@ -13,6 +13,9 @@ def test_exception_when_strict():
 
 
 def test_encode_str():
+    s = "你好"
+    assert bencode(s) == "{}:".format(len(s.encode())).encode() + s.encode(), "utf8"
+
     coded = bencode("ThisIsAString")
     assert coded == b"13:ThisIsAString", "Failed to encode string from str."
 
@@ -105,6 +108,10 @@ def test_dict_int_keys():
 @pytest.mark.parametrize(
     ["raw", "expected"],
     [
+        (-0, b"i0e"),
+        (0, b"i0e"),
+        (1, b"i1e"),
+        (-1, b"i-1e"),
         (["", 1], b"l0:i1ee"),
         ({"": 2}, b"d0:i2ee"),
         ("", b"0:"),
@@ -118,17 +125,10 @@ def test_dict_int_keys():
         ({}, b"de"),
         ((1, 2), b"li1ei2ee"),
         ([1, 2], b"li1ei2ee"),
+        # slow path overflow c long long
+        (9223372036854775808, b"i9223372036854775808e"),  # longlong int +1
+        (18446744073709551616, b"i18446744073709551616e"),  # unsigned long long +1
     ],
 )
 def test_basic(raw: Any, expected: bytes):
     assert bencode(raw) == expected
-
-
-def test_overflow():
-    with pytest.raises(OverflowError):
-        # b"i9223372036854775808e",  # longlong int +1
-        bencode(9223372036854775808)
-
-    with pytest.raises(OverflowError):
-        # b"i18446744073709551616e",  # unsigned long long +1
-        bencode(18446744073709551616)

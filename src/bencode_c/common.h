@@ -1,4 +1,4 @@
-#ifndef MY_COMMON_H
+#pragma once
 
 #include <Python.h>
 
@@ -9,6 +9,3 @@
   "invalid type '%s', "                                                                            \
   "bencode only support bytes, str, "                                                              \
   "int, list, tuple, dict and bool(encoded as 0/1, decoded as int)"
-
-#define MY_COMMON_H
-#endif

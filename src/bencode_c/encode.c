@@ -1,19 +1,14 @@
-#include "stdio.h"
-#include "string.h"
+#include <stdio.h>
+#include <string.h>
 
 #include "common.h"
+#include "str.h"
 
 #define defaultBufferSize 4096
 
 #define returnIfError(o)                                                                           \
-  if (o) {                                                                                         \
-    return o;                                                                                      \
-  }
-
-#define OperatorIF(err, op)                                                                        \
-  if (!err) {                                                                                      \
-    err |= op;                                                                                     \
-  }
+  if (o)                                                                                           \
+  return o
 
 static HPy bencode(HPy mod, HPy obj);
 
@@ -32,9 +27,10 @@ PyMethodDef encodeImpl = {
 
 HPy errTypeMessage;
 
-static inline void runtimeError(const char *data) { PyErr_SetString(PyExc_RuntimeError, data); }
-
-static inline void typeError(const char *data) { PyErr_SetString(PyExc_TypeError, data); }
+static inline void runtimeError(const char *data) {
+  PyErr_SetString(PyExc_RuntimeError, data);
+  return;
+}
 
 static inline HPy bencodeError(const char *data) {
   PyErr_SetString(BencodeEncodeError, data);
@@ -47,14 +43,20 @@ struct buffer {
   size_t cap;
 };
 
-static struct buffer *newBuffer() {
-  struct buffer *v = (struct buffer *)malloc(sizeof(struct buffer));
+static struct buffer newBuffer(int *res) {
+  struct buffer b = {};
 
-  v->buf = (char *)malloc(defaultBufferSize);
-  v->len = 0;
-  v->cap = defaultBufferSize;
+  b.buf = (char *)malloc(defaultBufferSize);
+  if (b.buf == NULL) {
+    PyErr_SetNone(PyExc_MemoryError);
+    *res = 1;
+    return b;
+  }
 
-  return v;
+  b.len = 0;
+  b.cap = defaultBufferSize;
+
+  return b;
 }
 
 static int bufferWrite(struct buffer *buf, const char *data, HPy_ssize_t size) {
@@ -63,7 +65,7 @@ static int bufferWrite(struct buffer *buf, const char *data, HPy_ssize_t size) {
   if (size + buf->len >= buf->cap) {
     tmp = realloc(buf->buf, buf->cap * 2 + size);
     if (tmp == NULL) {
-      runtimeError("realloc failed");
+      PyErr_SetNone(PyExc_MemoryError);
       return 1;
     }
     buf->cap = buf->cap * 2 + size;
@@ -77,19 +79,30 @@ static int bufferWrite(struct buffer *buf, const char *data, HPy_ssize_t size) {
   return 0;
 }
 
-static int bufferWriteLong(struct buffer *buf, long long val) {
-  int j = snprintf(NULL, 0, "%lld", val) + 1;
-  char *s = (char *)malloc(sizeof(char) * j);
-  snprintf(s, j, "%lld", val);
-  int r = bufferWrite(buf, s, j - 1);
-  free(s);
+static int bufferWriteSize_t(struct buffer *buf, HPy_ssize_t val) {
+  struct str s = {};
+
+  if (str_printf(&s, "%zd", val)) {
+    return 1;
+  }
+
+  int r = bufferWrite(buf, s.str, s.size);
+  free(s.str);
   return r;
 }
 
-static void freeBuffer(struct buffer *buf) {
-  free(buf->buf);
-  free(buf);
+static int bufferWriteLongLong(struct buffer *buf, long long val) {
+  struct str s = {};
+  if (str_printf(&s, "%lld", val)) {
+    return 1;
+  }
+
+  int r = bufferWrite(buf, s.str, s.size);
+  free(s.str);
+  return r;
 }
+
+static void freeBuffer(struct buffer buf) { free(buf.buf); }
 
 static int encodeAny(struct buffer *buf, HPy obj);
 
@@ -159,9 +172,9 @@ static int buildDictKeyList(HPy obj, HPy *list, HPy_ssize_t *count) {
 
   // check duplicated keys
   const char *currentKey = NULL;
-  size_t currentKeylen = 0;
+  size_t currentKeylen;
   const char *lastKey = NULL;
-  size_t lastKeylen = 0;
+  size_t lastKeylen;
 
   for (HPy_ssize_t i = 0; i < *count; i++) {
     HPy keyValue = PyList_GetItem(*list, i);
@@ -189,16 +202,15 @@ static int encodeStr(struct buffer *buf, HPy obj) {
   HPy b = PyUnicode_AsUTF8String(obj);
 
   HPy_ssize_t size = PyBytes_Size(b);
-
   const char *data = PyBytes_AsString(b);
   if (data == NULL) {
     Py_DecRef(b);
     return 1;
   }
 
-  int err = bufferWriteLong(buf, size);
-  OperatorIF(err, bufferWrite(buf, ":", 1));
-  OperatorIF(err, bufferWrite(buf, data, size));
+  int err = bufferWriteSize_t(buf, size);
+  err = err || bufferWrite(buf, ":", 1);
+  err = err || bufferWrite(buf, data, size);
 
   Py_DecRef(b);
 
@@ -209,9 +221,9 @@ static int encodeBytes(struct buffer *buf, HPy obj) {
   HPy_ssize_t size = PyBytes_Size(obj);
   const char *data = PyBytes_AsString(obj);
 
-  returnIfError(bufferWriteLong(buf, size));
-  returnIfError(bufferWrite(buf, ":", 1));
-  return bufferWrite(buf, data, size);
+  int err = bufferWriteSize_t(buf, size);
+  err = err || bufferWrite(buf, ":", 1);
+  return err || bufferWrite(buf, data, size);
 }
 
 static int encodeDict(struct buffer *buf, HPy obj) {
@@ -267,15 +279,60 @@ static int encodeDict(struct buffer *buf, HPy obj) {
   return bufferWrite(buf, "e", 1);
 }
 
-static int encodeInt(struct buffer *buf, HPy obj) {
-  long long val = PyLong_AsLongLong(obj);
-  if (PyErr_Occurred()) { // python int may overflow c long long.
+static int encodeInt_slow(struct buffer *buf, HPy obj) {
+  HPy fmt = PyUnicode_FromString("%d");
+  HPy s = PyUnicode_Format(fmt, obj); // s = '%d" % i
+  if (s == NULL) {
+    Py_DecRef(fmt);
     return 1;
   }
 
+  // TODO: use PyUnicode_AsUTF8String in py>=3.10
+  HPy b = PyUnicode_AsUTF8String(s); // b = s.encode()
+  if (b == NULL) {
+    Py_DecRef(fmt);
+    Py_DecRef(s);
+    return 1;
+  }
+
+  HPy_ssize_t size = PyBytes_Size(b); // len(b)
+  const char *data = PyBytes_AsString(b);
+  if (data == NULL) {
+    Py_DecRef(fmt);
+    Py_DecRef(s);
+    Py_DecRef(b);
+    return 1;
+  }
+
+  int err = bufferWrite(buf, "i", 1);
+  err = err || bufferWrite(buf, data, size);
+
+  Py_DecRef(fmt);
+  Py_DecRef(s);
+  Py_DecRef(b);
+
+  return err || bufferWrite(buf, "e", 1);
+}
+
+static int encodeInt_fast(struct buffer *buf, long long val) {
   returnIfError(bufferWrite(buf, "i", 1));
-  returnIfError(bufferWriteLong(buf, val));
+  returnIfError(bufferWriteLongLong(buf, val));
   return bufferWrite(buf, "e", 1);
+}
+
+static int encodeInt(struct buffer *buf, HPy obj) {
+  int overflow = 0;
+  long long val = PyLong_AsLongLongAndOverflow(obj, &overflow);
+  if (overflow) {
+    PyErr_Clear();
+    // slow path for very long int
+    return encodeInt_slow(buf, obj);
+  }
+  if (val == -1 && PyErr_Occurred()) { // unexpected error
+    return 1;
+  }
+
+  return encodeInt_fast(buf, val);
 }
 
 static int encodeList(struct buffer *buf, HPy obj) {
@@ -360,17 +417,21 @@ static int encodeAny(struct buffer *buf, HPy obj) {
 
 // mod is the module object
 static HPy bencode(HPy mod, HPy obj) {
-  struct buffer *buf = newBuffer();
+  int bufferAlloc = 0;
+  struct buffer buf = newBuffer(&bufferAlloc);
+  if (bufferAlloc) {
+    return NULL;
+  }
 
   // error when encoding
-  if (encodeAny(buf, obj)) {
+  if (encodeAny(&buf, obj)) {
     freeBuffer(buf);
     return NULL;
   }
 
-  HPy res = PyBytes_FromStringAndSize(buf->buf, buf->len);
+  HPy res = PyBytes_FromStringAndSize(buf.buf, buf.len);
 
   freeBuffer(buf);
 
   return res;
-};
+}
