@@ -24,7 +24,7 @@ static inline PyObject *formatError(HPy err, const char *format, ...) {
 
   va_start(args, format);
 
-  struct str s;
+  struct Str s;
   if (va_str_printf(&s, format, args)) {
     va_end(args);
     //    PyErr_SetString(PyExc_MemoryError, "failed to format string");
@@ -147,8 +147,8 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
   // i-1234e
   //  ^ index
 
-// bencode int overflow u128 or i128, build a PyLong object from str directly.
-__OverFlow:
+// bencode int overflow u128 or i128, build a PyLong object from Str directly.
+__OverFlow:;
   const size_t n = index_e - *index + 1;
   char *s = (char *)malloc(n);
   if (s == NULL) {
@@ -170,7 +170,7 @@ __OverFlow:
   return i;
 }
 
-// // there is no bytes/str in bencode, they only have 1 type for both of them.
+// // there is no bytes/Str in bencode, they only have 1 type for both of them.
 static PyObject *decodeBytes(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
   Py_ssize_t index_sep = 0;
   for (Py_ssize_t i = *index; i < size; i++) {

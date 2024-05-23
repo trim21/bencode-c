@@ -5,12 +5,12 @@
 
 #include <Python.h>
 
-struct str {
+struct Str {
   char *str;
   Py_ssize_t size;
-} str;
+};
 
-static int va_str_printf(struct str *ss, const char *format, va_list args) {
+static int va_str_printf(struct Str *ss, const char *format, va_list args) {
   size_t size = vsnprintf(NULL, 0, format, args) + 1;
   if (size == 0) {
     PyErr_SetString(PyExc_RuntimeError, "snprintf return unexpected value");
@@ -31,7 +31,7 @@ static int va_str_printf(struct str *ss, const char *format, va_list args) {
   return 0;
 }
 
-static int str_printf(struct str *ss, const char *format, ...) {
+static int str_printf(struct Str *ss, const char *format, ...) {
   va_list args;
 
   va_start(args, format);
