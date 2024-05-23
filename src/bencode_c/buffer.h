@@ -50,7 +50,7 @@ static int bufferWrite(struct Buffer *buf, const char *data, HPy_ssize_t size) {
 static int bufferWriteSize_t(struct Buffer *buf, HPy_ssize_t val) {
   struct Str s = {};
 
-  if (str_printf(&s, "%zd", val)) {
+  if (str_printf(&s, "%d", val)) {
     return 1;
   }
 
