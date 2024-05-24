@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common.h"
-#include "str.h"
 
 #define defaultBufferSize 4096
 
@@ -24,7 +23,24 @@
 // #endif
 #include <kbtree.h>
 #define elem_cmp(a, b) (a - b)
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#else
+#pragma warning(push)
+#pragma warning(disable : 4090)
+#pragma warning(disable : 4244)
+#endif
+
 KBTREE_INIT(PyObject, PyObject *, elem_cmp)
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#else
+#pragma warning(pop)
+#endif
 
 //  #ifdef ENVIRONMENT64
 //  #else

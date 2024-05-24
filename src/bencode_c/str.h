@@ -31,16 +31,6 @@ static int va_str_printf(Str *ss, const char *format, va_list args) {
   return 0;
 }
 
-static int str_printf(Str *ss, const char *format, ...) {
-  va_list args;
-
-  va_start(args, format);
-  int r = va_str_printf(ss, format, args);
-  va_end(args);
-
-  return r;
-}
-
 static int strCompare(const char *s1, size_t len1, const char *s2, size_t len2) {
   size_t min_len = (len1 < len2) ? len1 : len2;
   int result = strncmp(s1, s2, min_len);

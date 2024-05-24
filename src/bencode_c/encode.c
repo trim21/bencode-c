@@ -1,8 +1,19 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 #include "common.h"
 #include "ctx.h"
+#include "str.h"
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 #define returnIfError(o)                                                                           \
   if (o)                                                                                           \

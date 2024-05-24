@@ -1,6 +1,4 @@
-// #if !defined(Py_DEBUG)
-// #define Py_LIMITED_API 0x03080000
-// #endif
+#define Py_LIMITED_API 0x03080000
 
 #include "common.h"
 

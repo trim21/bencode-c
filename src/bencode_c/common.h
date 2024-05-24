@@ -10,6 +10,10 @@
   "bencode only support bytes, str, "                                                              \
   "int, list, tuple, dict and bool(encoded as 0/1, decoded as int)"
 
+#ifdef _MSC_VER
+#pragma warning(disable : 4996)
+#endif
+
 #ifdef BENCODE_DEBUG
 
 #ifdef _MSC_VER
