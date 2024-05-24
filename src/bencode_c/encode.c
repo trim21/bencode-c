@@ -193,7 +193,7 @@ static int encodeDict(Context *ctx, HPy obj) {
     struct keyValuePair keyValue = list[i];
     int err = 0;
 
-    err |= bufferWriteFormat(ctx, "%d", keyValue.keylen);
+    err |= bufferWriteFormat(ctx, "%ld", keyValue.keylen);
     err |= bufferWriteChar(ctx, ':');
     err |= bufferWrite(ctx, keyValue.key, keyValue.keylen);
     err |= encodeAny(ctx, keyValue.value);
@@ -313,31 +313,15 @@ static int encodeAny(Context *ctx, HPy obj) {
     return encodeInt(ctx, obj);
   }
 
-  //  debug_print("try get object key");
-  //  khint_t sk = kh_get_PyObject(ctx->seen, (khint64_t)obj);
-  //  khint_t sk = (khint64_t)obj;
-  //  khint_t sk = 5;
-  //  debug_print("try found duplicated object");
-
-  //  khint_t k = kh_get_PyObject(ctx->seen, (khint64_t)obj);
-  //  debug_print("hashed key %d", k);
-  //  if (k != kh_end(ctx->seen)) {
-  //    debug_print("found duplicated object");
-  //    PyErr_SetString(PyExc_ValueError, "object loop found");
-  //    return 1;
-  //  }
-
 #ifdef BENCODE_USE_SET
   debug_print("object ptr=0x%p", obj);
-  khint_t k = kh_get(PTR, ctx->seen, (khint64_t)obj);
-  if (k != kh_end(ctx->seen)) { // not found
+  int absent;
+  kh_put_PTR(ctx->seen, (khint_t)obj, &absent);
+  if (!absent) { // not found
     debug_print("found loop object");
     PyErr_SetString(PyExc_ValueError, "object loop found");
     return 1;
   }
-  int absent;
-  kh_put_PTR(ctx->seen, k, &absent);
-//  kh_value(ctx->seen, k) = 1;
 #else
   if (kb_get(PyObject, ctx->seen, obj) == NULL) {
     kb_put_PyObject(ctx->seen, obj);
