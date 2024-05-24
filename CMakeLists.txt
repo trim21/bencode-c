@@ -10,6 +10,8 @@ include_directories(${Python3_INCLUDE_DIRS})
 
 include_directories(src/bencode_c)
 
+include_directories(vendor/klib)
+
 add_executable(
         bencode_c
         src/bencode_c/overflow.h
@@ -18,5 +20,5 @@ add_executable(
         src/bencode_c/decode.c
         src/bencode_c/encode.c
         src/bencode_c/str.h
-        src/bencode_c/buffer.h
+        src/bencode_c/ctx.h
 )

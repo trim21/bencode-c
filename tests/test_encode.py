@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections
 from typing import Any
 
@@ -7,9 +9,8 @@ from bencode_c import BencodeEncodeError, bencode
 
 
 def test_exception_when_strict():
-    invalid_obj = None
     with pytest.raises(TypeError):
-        bencode(invalid_obj)
+        bencode(None)
 
 
 def test_encode_str():
@@ -48,11 +49,15 @@ def test_encode_tuple():
 
 
 def test_encode_dict():
-    od = collections.OrderedDict()
-    od["kb"] = 2
-    od["ka"] = "va"
+    od = collections.OrderedDict(
+        [
+            ("kb", 2),
+            ("ka", 1),
+            ("kc", 3),
+        ]
+    )
     coded = bencode(od)
-    assert coded == b"d2:ka2:va2:kbi2ee", "Failed to encode dictionary from dict."
+    assert coded == b"d2:kai1e2:kbi2e2:kci3ee", "Failed to encode dictionary from dict."
 
 
 def test_encode_complex():
@@ -109,7 +114,7 @@ def test_dict_int_keys():
 
 
 @pytest.mark.parametrize(
-    ["raw", "expected"],
+    "case",
     [
         (-0, b"i0e"),
         (0, b"i0e"),
@@ -132,6 +137,21 @@ def test_dict_int_keys():
         (9223372036854775808, b"i9223372036854775808e"),  # longlong int +1
         (18446744073709551616, b"i18446744073709551616e"),  # unsigned long long +1
     ],
+    ids=lambda val: f"raw={val[0]!r} expected={val[1]!r}",
 )
-def test_basic(raw: Any, expected: bytes):
+def test_basic(case: tuple[Any, bytes]):
+    raw, expected = case
     assert bencode(raw) == expected
+
+
+def test_recursive_object():
+    a = 1
+    assert bencode([a, a, a, a])
+    b = "test str"
+    assert bencode([b, b, b, b])
+    assert bencode({b: b})
+
+    d = {}
+    d["a"] = d
+    with pytest.raises(ValueError, match="object loop found"):
+        assert bencode(d)

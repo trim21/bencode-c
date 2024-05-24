@@ -5,12 +5,12 @@
 
 #include <Python.h>
 
-struct Str {
+typedef struct str {
   char *str;
   Py_ssize_t size;
-};
+} Str;
 
-static int va_str_printf(struct Str *ss, const char *format, va_list args) {
+static int va_str_printf(Str *ss, const char *format, va_list args) {
   size_t size = vsnprintf(NULL, 0, format, args) + 1;
   if (size == 0) {
     PyErr_SetString(PyExc_RuntimeError, "snprintf return unexpected value");
@@ -31,7 +31,7 @@ static int va_str_printf(struct Str *ss, const char *format, va_list args) {
   return 0;
 }
 
-static int str_printf(struct Str *ss, const char *format, ...) {
+static int str_printf(Str *ss, const char *format, ...) {
   va_list args;
 
   va_start(args, format);
@@ -39,4 +39,22 @@ static int str_printf(struct Str *ss, const char *format, ...) {
   va_end(args);
 
   return r;
+}
+
+static int strCompare(const char *s1, size_t len1, const char *s2, size_t len2) {
+  size_t min_len = (len1 < len2) ? len1 : len2;
+  int result = strncmp(s1, s2, min_len);
+
+  if (result != 0) {
+    return result;
+  }
+
+  // first min_len have same characters.
+  if (len1 < len2) {
+    return -1;
+  } else if (len1 > len2) {
+    return 1;
+  } else {
+    return 0;
+  }
 }

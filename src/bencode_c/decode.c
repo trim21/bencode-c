@@ -24,7 +24,7 @@ static inline PyObject *formatError(HPy err, const char *format, ...) {
 
   va_start(args, format);
 
-  struct Str s;
+  Str s;
   if (va_str_printf(&s, format, args)) {
     va_end(args);
     return NULL;
@@ -219,24 +219,6 @@ static PyObject *decodeList(const char *buf, Py_ssize_t *index, Py_ssize_t size)
   *index = *index + 1;
 
   return l;
-}
-
-static int strCompare(const char *s1, size_t len1, const char *s2, size_t len2) {
-  size_t min_len = (len1 < len2) ? len1 : len2;
-  int result = strncmp(s1, s2, min_len);
-
-  if (result != 0) {
-    return result;
-  }
-
-  // first min_len have same characters.
-  if (len1 < len2) {
-    return -1;
-  } else if (len1 > len2) {
-    return 1;
-  } else {
-    return 0;
-  }
 }
 
 static void decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyObject *d) {

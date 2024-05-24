@@ -1,8 +1,8 @@
 version: 3
 tasks:
-  build:
-    cmds:
-      - cmd: python setup.py bdist_wheel
+  #  build:
+  #    cmds:
+  #      - cmd: python setup.py bdist_wheel
   bump:
     vars:
       VERSION:
@@ -15,7 +15,7 @@ tasks:
   c-fmt:
     cmd: clang-format -i src/bencode_c/*.c src/bencode_c/*.h
 
-  dev:build:
+  build:
     sources:
       - src/**/*.c
       - src/**/*.h
@@ -23,8 +23,25 @@ tasks:
       - src/**/*.so
       - src/**/*.pyd
     cmds:
-      - cmd: python setup.py build_ext --force --inplace
+      - cmd: python setup.py build_ext --force --inplace # --debug
         silent: true
+
+  build:inplace:
+    sources:
+      - src/**/*.c
+      - src/**/*.h
+    generates:
+      - src/**/*.so
+      - src/**/*.pyd
+    cmds:
+      - cmd: python setup.py build_ext --force --inplace # --debug
+        silent: true
+
+  build:dev:
+    env:
+      BENCODE_DEBUG: '1'
+    cmds:
+      - task: build:inplace
 
   dev:
     sources:
@@ -38,9 +55,10 @@ tasks:
       - src/**/*.so
       - src/**/*.pyd
     env:
-      HPY: trace
       CFLAGS: "-O0 -g"
+      PYTHONPATH: src
       # LD_PRELOAD: libclang_rt.asan.so
     cmds:
-      - task: dev:build
+      - task: build:dev
+      - cmd: python -X faulthandler a.py
       - pytest -x -v -s

@@ -1,4 +1,6 @@
-#define Py_LIMITED_API 0x03080000
+// #if !defined(Py_DEBUG)
+// #define Py_LIMITED_API 0x03080000
+// #endif
 
 #include "common.h"
 
@@ -25,6 +27,7 @@ PyMODINIT_FUNC PyInit__bencode(void) {
   if (PyModule_AddFunctions(m, &encodeImpl)) {
     return NULL;
   }
+
   if (PyModule_AddFunctions(m, &decodeImpl)) {
     return NULL;
   }
@@ -53,6 +56,6 @@ PyMODINIT_FUNC PyInit__bencode(void) {
     Py_DECREF(m);
     return NULL;
   }
-  ///
+
   return m;
 }
