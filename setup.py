@@ -25,6 +25,7 @@ setup(
     ext_modules=[module],
     packages=find_packages("src"),
     package_dir={"": "src"},
-    package_data={"": ["*.h", "*.c", "*.pyi", "py.typed"]},
+    package_data={"": ["*.h", "*.c", "*.pyi", "py.typed"], "vendor": ["**/*.*"]},
+    include_package_data=True,
     options={"bdist_wheel": {"py_limited_api": "cp38"}},
 )
