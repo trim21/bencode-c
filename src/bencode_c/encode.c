@@ -293,21 +293,11 @@ static int encodeTuple(Context *ctx, HPy obj) {
 }
 
 static inline int checkCircularRef(Context *ctx, HPy obj) {
-#ifdef BENCODE_USE_SET
-  int absent;
-  kh_put_PTR(ctx->seen, (khint64_t)obj, &absent);
-  if (!absent) { // not found
-    debug_print("circular reference found");
-    PyErr_SetString(PyExc_ValueError, "circular reference found");
-    return 1;
-  }
-#else
   if (kb_get(PyObject, ctx->seen, obj) != NULL) {
     PyErr_SetString(PyExc_ValueError, "circular reference found");
     return 1;
   }
   kb_put_PyObject(ctx->seen, obj);
-#endif
 
   return 0;
 }
@@ -342,11 +332,7 @@ static int encodeAny(Context *ctx, HPy obj) {
     returnIfError(checkCircularRef(ctx, obj));
     int r = encodeList(ctx, obj);
 
-#ifdef BENCODE_USE_SET
-    kh_del_PTR(ctx->seen, (khint64_t)obj);
-#else
     kb_del_PyObject(ctx->seen, obj);
-#endif
 
     return r;
   }
@@ -355,11 +341,7 @@ static int encodeAny(Context *ctx, HPy obj) {
     returnIfError(checkCircularRef(ctx, obj));
     int r = encodeTuple(ctx, obj);
 
-#ifdef BENCODE_USE_SET
-    kh_del_PTR(ctx->seen, (khint64_t)obj);
-#else
     kb_del_PyObject(ctx->seen, obj);
-#endif
 
     return r;
   }
@@ -368,11 +350,7 @@ static int encodeAny(Context *ctx, HPy obj) {
     returnIfError(checkCircularRef(ctx, obj));
     int r = encodeDict(ctx, obj);
 
-#ifdef BENCODE_USE_SET
-    kh_del_PTR(ctx->seen, (khint64_t)obj);
-#else
     kb_del_PyObject(ctx->seen, obj);
-#endif
 
     return r;
   }

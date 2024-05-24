@@ -30,8 +30,9 @@
     printf(__FILE__);                                                                              \
     printf(":");                                                                                   \
     printf("%d", __LINE__);                                                                        \
-    printf("\t%s", __PRETTY_FUNCTION__);                                                           \
-    printf("\tDEBUG: " #fmt "\n", ##__VA_ARGS__);                                                  \
+    printf("\t%s\tDEBUG: ", __PRETTY_FUNCTION__);                                                  \
+    printf(fmt, ##__VA_ARGS__);                                                                    \
+    printf("\n");                                                                                  \
   } while (0)
 
 #endif

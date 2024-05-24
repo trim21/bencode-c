@@ -47,7 +47,7 @@ tasks:
       - src/**/*.so
       - src/**/*.pyd
     cmds:
-      - cmd: python setup.py build_ext --force --inplace # --debug
+      - cmd: python setup.py build_ext --force --inplace --debug
         silent: true
 
   dev:

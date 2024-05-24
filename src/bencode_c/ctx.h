@@ -22,22 +22,9 @@
 // #define ENVIRONMENT32
 // #endif
 // #endif
-#ifndef MS_WIN32
-#define BENCODE_USE_SET
-#endif
-
-#ifdef BENCODE_USE_SET
-
-#include "khash.h"
-KHASH_SET_INIT_INT64(PTR);
-
-#else
-
-#include "kbtree.h"
+#include <kbtree.h>
 #define elem_cmp(a, b) (a - b)
 KBTREE_INIT(PyObject, PyObject *, elem_cmp)
-
-#endif
 
 //  #ifdef ENVIRONMENT64
 //  #else
@@ -48,11 +35,7 @@ typedef struct ctx {
   char *buf;
   size_t index;
   size_t cap;
-#ifdef BENCODE_USE_SET
-  khash_t(PTR) * seen;
-#else
   kbtree_t(PyObject) * seen;
-#endif
 } Context;
 
 #ifdef _MSC_VER
@@ -76,22 +59,14 @@ static Context newContext(int *res) {
   b.index = 0;
   b.cap = defaultBufferSize;
 
-#ifdef BENCODE_USE_SET
-  b.seen = kh_init(PTR);
-#else
   b.seen = kb_init(PyObject, 100);
-#endif
 
   return b;
 }
 
 static void freeContext(Context ctx) {
   if (ctx.seen != NULL) {
-#ifdef BENCODE_USE_SET
-    kh_destroy(PTR, ctx.seen);
-#else
     kb_destroy(PyObject, ctx.seen);
-#endif
   }
   free(ctx.buf);
 }
