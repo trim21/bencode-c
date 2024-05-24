@@ -22,6 +22,8 @@ tasks:
     generates:
       - src/**/*.so
       - src/**/*.pyd
+    env:
+      BENCODE_DEBUG: '1'
     cmds:
       - cmd: python setup.py build_ext --force --inplace
         silent: true
