@@ -316,7 +316,7 @@ static int encodeAny(Context *ctx, HPy obj) {
 #ifdef BENCODE_USE_SET
   debug_print("object ptr=0x%p", obj);
   int absent;
-  kh_put_PTR(ctx->seen, (khint_t)obj, &absent);
+  kh_put_PTR(ctx->seen, (khint64_t)obj, &absent);
   if (!absent) { // not found
     debug_print("found loop object");
     PyErr_SetString(PyExc_ValueError, "object loop found");
