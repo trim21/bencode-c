@@ -327,22 +327,25 @@ static int encodeAny(Context *ctx, HPy obj) {
   //    return 1;
   //  }
 
+#ifdef BENCODE_USE_SET
   debug_print("object ptr=0x%p", obj);
-
-  int absence = 0;
-  kh_put_PTR(ctx->seen, (khint64_t)obj, &absence);
-  if (!absence) { // not found
+  khint_t k = kh_get(PTR, ctx->seen, (khint64_t)obj);
+  if (k != kh_end(ctx->seen)) { // not found
     debug_print("found loop object");
     PyErr_SetString(PyExc_ValueError, "object loop found");
     return 1;
   }
-
-  //  if (kb_get(PyObject, ctx->seen, obj) == NULL) {
-  //    kb_put_PyObject(ctx->seen, obj);
-  //  } else {
-  //    PyErr_SetString(PyExc_ValueError, "object loop found");
-  //    return 1;
-  //  }
+  int absent;
+  kh_put_PTR(ctx->seen, k, &absent);
+//  kh_value(ctx->seen, k) = 1;
+#else
+  if (kb_get(PyObject, ctx->seen, obj) == NULL) {
+    kb_put_PyObject(ctx->seen, obj);
+  } else {
+    PyErr_SetString(PyExc_ValueError, "object loop found");
+    return 1;
+  }
+#endif
 
   if (PyList_Check(obj)) {
     return encodeList(ctx, obj);

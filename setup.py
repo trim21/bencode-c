@@ -10,7 +10,7 @@ extra_compile_args = None
 if os.environ.get("BENCODE_DEBUG") == "1":
     macro.append(("BENCODE_DEBUG", "1"))
     # if sys.platform == 'win32':
-    #     extra_compile_args = ['/P']
+    #     extra_compile_args = ['/Z7', '/DEBUG']
 
 module = Extension(
     "bencode_c._bencode",
