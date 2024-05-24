@@ -57,12 +57,12 @@ int sortKeyValuePair(const void *a, const void *b) {
 static void freeKeyValueList(KeyValuePair *list, HPy_ssize_t len) {
 
   for (HPy_ssize_t i = 0; i < len; i++) {
-    debug_print("1 %d\n", i);
-    debug_print("kk %d\n", list[i].pyKey);
+    debug_print("1 %d", i);
+    debug_print("kk %d", list[i].pyKey);
     Py_XDECREF(list[i].pyKey);
   }
 
-  debug_print("free list\n");
+  debug_print("free list");
   free(list);
 }
 
@@ -152,7 +152,7 @@ static int buildDictKeyList(HPy obj, struct keyValuePair **pairs, HPy_ssize_t *c
     currentKeylen = item.keylen;
 
     if (lastKeylen == currentKeylen) {
-      debug_print("lastKey=%s, currentKey=%s\n", lastKey, currentKey);
+      debug_print("lastKey=%s, currentKey=%s", lastKey, currentKey);
       if (strncmp(lastKey, currentKey, lastKeylen) == 0) {
         bencodeError("find duplicated keys with str and bytes in dict");
         return 1;
@@ -205,7 +205,7 @@ static int encodeDict(Context *ctx, HPy obj) {
   }
 
   for (HPy_ssize_t i = 0; i < count; i++) {
-    debug_print("encode %d\n", i);
+    debug_print("encode key[%d]", i);
 
     struct keyValuePair keyValue = list[i];
     int err = 0;
@@ -216,15 +216,15 @@ static int encodeDict(Context *ctx, HPy obj) {
     err |= encodeAny(ctx, keyValue.value);
 
     if (err) {
-      debug_print("failed\n");
+      debug_print("failed");
       freeKeyValueList(list, count);
       return 1;
     }
   }
 
-  debug_print("1\n");
+  debug_print("1");
   freeKeyValueList(list, count);
-  debug_print("2\n");
+  debug_print("2");
 
   return bufferWrite(ctx, "e", 1);
 }
@@ -309,53 +309,12 @@ static int encodeTuple(Context *ctx, HPy obj) {
   return bufferWrite(ctx, "e", 1);
 }
 
-KHASH_MAP_INIT_INT(m32, char) // instantiate structs and methods
-
 static int encodeAny(Context *ctx, HPy obj) {
-//  unsigned long long ptr = (unsigned long long)obj;
-//  //  debug_print("%d\n", (long long)obj);
-//  //  debug_print("%d\n", (long)obj);
-//  //  debug_print("%d\n", (size_t)obj);
-//  //  debug_print("ptr=%d\n", ptr);
-//  //  debug_print("encodeAny len(b.seen)=%d\n", kh_size(ctx->seen));
-//  //  debug_print("encodeAny b.seen=%d\n", ctx->seen);
-//  khint_t sk = kh_get(PyObject, ctx->seen, ptr);
-//  debug_print("set key=%d\n", sk);
-//  debug_print("set end=%d\n", kh_end(ctx->seen));
-//  if (sk != kh_end(ctx->seen)) {
-//    PyErr_SetString(PyExc_ValueError, "recursive object found");
-//    return 1;
-//  }
-//  debug_print("put set key=%d\n", sk);
-  //  int absent;
-  //  int ret, is_missing;
-  //  kh_put(PyObject, ctx->seen, sk, &ret);
-  {
-    int ret, is_missing;
-    khint_t k;
-    khash_t(m32) *h = kh_init(m32); // allocate a hash table
-    k = kh_put(m32, h, 5, &ret);    // insert a key to the hash table
-    if (!ret) {
-      kh_del(m32, h, k);
-    }
-    kh_value(h, k) = 10;           // set the value
-    k = kh_get(m32, h, 10);        // query the hash table
-    is_missing = (k == kh_end(h)); // test if the key is present
-    k = kh_get(m32, h, 5);
-    kh_del(m32, h, k);                           // remove a key-value pair
-    for (k = kh_begin(h); k != kh_end(h); ++k) { // traverse
-      if (kh_exist(h, k)) {                      // test if a bucket contains data
-        kh_value(h, k) = 1;
-      }
-    }
-    kh_destroy(m32, h); // deallocate the hash table
-  }
-
-  if (Py_True == obj) {
+  if (obj == Py_True) {
     return bufferWrite(ctx, "i1e", 3);
   }
 
-  if (Py_False == obj) {
+  if (obj == Py_False) {
     return bufferWrite(ctx, "i0e", 3);
   }
 
@@ -369,6 +328,13 @@ static int encodeAny(Context *ctx, HPy obj) {
 
   if (PyLong_Check(obj)) {
     return encodeInt(ctx, obj);
+  }
+
+  if (kb_get(PyObject, ctx->seen, obj) == NULL) {
+    kb_put_PyObject(ctx->seen, obj);
+  } else {
+    PyErr_SetString(PyExc_ValueError, "object loop found");
+    return 1;
   }
 
   if (PyList_Check(obj)) {
@@ -408,6 +374,7 @@ static int encodeAny(Context *ctx, HPy obj) {
 
 // mod is the module object
 static HPy bencode(HPy mod, HPy obj) {
+  debug_print("");
   int bufferAlloc = 0;
   Context ctx = newContext(&bufferAlloc);
   if (bufferAlloc) {

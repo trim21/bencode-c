@@ -140,3 +140,16 @@ def test_dict_int_keys():
 def test_basic(case: tuple[Any, bytes]):
     raw, expected = case
     assert bencode(raw) == expected
+
+
+def test_recursive_object():
+    a = 1
+    assert bencode([a, a, a, a])
+    b = "test str"
+    assert bencode([b, b, b, b])
+    assert bencode({b: b})
+
+    d = {}
+    d["a"] = d
+    with pytest.raises(ValueError, match="object loop found"):
+        assert bencode(d)

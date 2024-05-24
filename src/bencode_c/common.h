@@ -12,11 +12,27 @@
 
 #ifdef BENCODE_DEBUG
 
+#ifdef _MSC_VER
 #define debug_print(fmt, ...)                                                                      \
   do {                                                                                             \
-    fprintf(stderr, fmt, __VA_ARGS__);                                                             \
+    printf(__FILE__);                                                                              \
+    printf(":");                                                                                   \
+    printf("%d", __LINE__);                                                                        \
+    printf("\t%s", __FUNCTION__);                                                                  \
+    printf("\tDEBUG: " #fmt "\n", __VA_ARGS__);                                                    \
   } while (0)
 
+#else
+#define debug_print(fmt, ...)                                                                      \
+  do {                                                                                             \
+    printf(__FILE__);                                                                              \
+    printf(":");                                                                                   \
+    printf("%d", __LINE__);                                                                        \
+    printf("\t%s", __PRETTY_FUNCTION__);                                                           \
+    printf("\tDEBUG: " #fmt "\n", ##__VA_ARGS__);                                                  \
+  } while (0)
+
+#endif
 #else
 
 #define debug_print(fmt, ...)

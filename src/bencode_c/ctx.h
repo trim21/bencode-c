@@ -3,6 +3,7 @@
 #include "common.h"
 #include "str.h"
 
+#include "kbtree.h"
 #include "khash.h"
 
 #define defaultBufferSize 4096
@@ -25,25 +26,26 @@
 #endif
 #endif
 
-KHASH_SET_INIT_INT64(PyObject);
+// KHASH_MAP_INIT_INT(PyObject, char);
+#define elem_cmp(a, b) (a - b)
+KBTREE_INIT(PyObject, PyObject *, elem_cmp)
+
 //  #ifdef ENVIRONMENT64
 //  #else
 //  KHASH_SET_INIT_INT(pyObj);
 //  #endif
 
-static int setKeyAbsent = 0;
-
 typedef struct ctx {
   char *buf;
   size_t index;
   size_t cap;
-  khash_t(PyObject) * seen;
+  kbtree_t(PyObject) * seen;
 } Context;
 
 #ifdef _MSC_VER
 static int bufferWriteFormat(Context *ctx, _Printf_format_string_ const char *format, ...);
 #else
-static int bufferWriteFormat(Buffer *buf, const char *format, ...)
+static int bufferWriteFormat(Context *buf, const char *format, ...)
     __attribute__((format(printf, 2, 3)));
 #endif
 
@@ -60,7 +62,7 @@ static Context newContext(int *res) {
 
   b.index = 0;
   b.cap = defaultBufferSize;
-  b.seen = kh_init(PyObject);
+  b.seen = kb_init(PyObject, 100);
 
   //  debug_print("newContext b.seen=%d\n", b.seen);
 
@@ -69,7 +71,8 @@ static Context newContext(int *res) {
 
 static void freeContext(Context ctx) {
   if (ctx.seen != NULL) {
-    kh_destroy(PyObject, ctx.seen);
+    //    kh_destroy(PyObject, ctx.seen);
+    kb_destroy(PyObject, ctx.seen);
   }
   free(ctx.buf);
 }
