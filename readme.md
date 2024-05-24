@@ -83,3 +83,21 @@ test_benchmark[encode-mypy]      7.8197 (1.72)      7.2574 (1.69)      8.3987 (1
 test_benchmark[encode-py]       23.9431 (5.26)     23.4045 (5.46)     24.2830 (4.87)     24.0749 (5.43)     0.3818 (1.41)             10
 ----------------------------------------------------------------------------------------------------------------------------------------
 ```
+
+# development
+
+```shell
+git clone -r https://github.com/trim21/bencode-c bencode-c
+cd bencode-c
+python -m venv .venv
+# enable venv
+source .venv/bin/activate
+
+pip install -e .
+
+pytest -sv
+```
+
+`CMakeLists.txt` is for IDE to find includes, not for building files.
+
+use `setup.py` to build python extension.

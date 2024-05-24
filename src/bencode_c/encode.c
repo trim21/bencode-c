@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <khash.h>
-
 #include "common.h"
 #include "ctx.h"
 
@@ -41,7 +39,7 @@ static int encodeAny(Context *ctx, HPy obj);
 
 typedef struct keyValuePair {
   char *key;
-  int keylen;
+  Py_ssize_t keylen;
 
   PyObject *pyKey;
   PyObject *value;
@@ -55,10 +53,9 @@ int sortKeyValuePair(const void *a, const void *b) {
 }
 
 static void freeKeyValueList(KeyValuePair *list, HPy_ssize_t len) {
-
   for (HPy_ssize_t i = 0; i < len; i++) {
-    debug_print("1 %d", i);
-    debug_print("kk %d", list[i].pyKey);
+    debug_print("1 %lld", i);
+    debug_print("key 0x%p", list[i].pyKey);
     Py_XDECREF(list[i].pyKey);
   }
 
@@ -119,25 +116,11 @@ static int buildDictKeyList(HPy obj, struct keyValuePair **pairs, HPy_ssize_t *c
     }
 
     pp[i].value = value;
-
-    KeyValuePair item = pp[i];
-  }
-
-  for (HPy_ssize_t i = 0; i < *count; i++) {
-    KeyValuePair item = pp[i];
   }
 
   Py_DecRef(keys);
 
-  for (HPy_ssize_t i = 0; i < *count; i++) {
-    KeyValuePair item = pp[i];
-  }
-
   qsort(pp, *count, sizeof(KeyValuePair), sortKeyValuePair);
-
-  for (HPy_ssize_t i = 0; i < *count; i++) {
-    KeyValuePair item = pp[i];
-  }
 
   // check duplicated keys
   const char *lastKey = pp[0].key;
@@ -205,7 +188,7 @@ static int encodeDict(Context *ctx, HPy obj) {
   }
 
   for (HPy_ssize_t i = 0; i < count; i++) {
-    debug_print("encode key[%d]", i);
+    debug_print("encode key[%zd]", i);
 
     struct keyValuePair keyValue = list[i];
     int err = 0;
@@ -330,12 +313,36 @@ static int encodeAny(Context *ctx, HPy obj) {
     return encodeInt(ctx, obj);
   }
 
-  if (kb_get(PyObject, ctx->seen, obj) == NULL) {
-    kb_put_PyObject(ctx->seen, obj);
-  } else {
+  //  debug_print("try get object key");
+  //  khint_t sk = kh_get_PyObject(ctx->seen, (khint64_t)obj);
+  //  khint_t sk = (khint64_t)obj;
+  //  khint_t sk = 5;
+  //  debug_print("try found duplicated object");
+
+  //  khint_t k = kh_get_PyObject(ctx->seen, (khint64_t)obj);
+  //  debug_print("hashed key %d", k);
+  //  if (k != kh_end(ctx->seen)) {
+  //    debug_print("found duplicated object");
+  //    PyErr_SetString(PyExc_ValueError, "object loop found");
+  //    return 1;
+  //  }
+
+  debug_print("object ptr=0x%p", obj);
+
+  int absence = 0;
+  kh_put_PTR(ctx->seen, (khint64_t)obj, &absence);
+  if (!absence) { // not found
+    debug_print("found loop object");
     PyErr_SetString(PyExc_ValueError, "object loop found");
     return 1;
   }
+
+  //  if (kb_get(PyObject, ctx->seen, obj) == NULL) {
+  //    kb_put_PyObject(ctx->seen, obj);
+  //  } else {
+  //    PyErr_SetString(PyExc_ValueError, "object loop found");
+  //    return 1;
+  //  }
 
   if (PyList_Check(obj)) {
     return encodeList(ctx, obj);

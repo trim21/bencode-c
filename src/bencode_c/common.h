@@ -19,7 +19,9 @@
     printf(":");                                                                                   \
     printf("%d", __LINE__);                                                                        \
     printf("\t%s", __FUNCTION__);                                                                  \
-    printf("\tDEBUG: " #fmt "\n", __VA_ARGS__);                                                    \
+    printf("\tDEBUG: ");                                                                           \
+    printf(fmt, __VA_ARGS__);                                                                      \
+    printf("\n");                                                                                  \
   } while (0)
 
 #else

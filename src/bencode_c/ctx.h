@@ -9,26 +9,27 @@
 #define defaultBufferSize 4096
 
 // Check windows
-#if _WIN32 || _WIN64
-#if _WIN64
-#define ENVIRONMENT64
-#else
-#define ENVIRONMENT32
-#endif
-#endif
+// #if _WIN32 || _WIN64
+// #if _WIN64
+// #define ENVIRONMENT64
+// #else
+// #define ENVIRONMENT32
+// #endif
+// #endif
 
 // Check GCC
-#if __GNUC__
-#if __x86_64__ || __ppc64__
-#define ENVIRONMENT64
-#else
-#define ENVIRONMENT32
-#endif
-#endif
+// #if __GNUC__
+// #if __x86_64__ || __ppc64__
+// #define ENVIRONMENT64
+// #else
+// #define ENVIRONMENT32
+// #endif
+// #endif
 
-// KHASH_MAP_INIT_INT(PyObject, char);
-#define elem_cmp(a, b) (a - b)
-KBTREE_INIT(PyObject, PyObject *, elem_cmp)
+KHASH_SET_INIT_INT64(PTR);
+
+// #define elem_cmp(a, b) (a - b)
+// KBTREE_INIT(PyObject, PyObject *, elem_cmp)
 
 //  #ifdef ENVIRONMENT64
 //  #else
@@ -39,7 +40,8 @@ typedef struct ctx {
   char *buf;
   size_t index;
   size_t cap;
-  kbtree_t(PyObject) * seen;
+  khash_t(PTR) * seen;
+  //  kbtree_t(PyObject) * seen;
 } Context;
 
 #ifdef _MSC_VER
@@ -62,7 +64,8 @@ static Context newContext(int *res) {
 
   b.index = 0;
   b.cap = defaultBufferSize;
-  b.seen = kb_init(PyObject, 100);
+  b.seen = kh_init(PTR);
+  //  b.seen = kb_init(PyObject, 100);
 
   //  debug_print("newContext b.seen=%d\n", b.seen);
 
@@ -71,8 +74,8 @@ static Context newContext(int *res) {
 
 static void freeContext(Context ctx) {
   if (ctx.seen != NULL) {
-    //    kh_destroy(PyObject, ctx.seen);
-    kb_destroy(PyObject, ctx.seen);
+    kh_destroy(PTR, ctx.seen);
+    //    kb_destroy(PyObject, ctx.seen);
   }
   free(ctx.buf);
 }

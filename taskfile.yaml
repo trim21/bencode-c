@@ -40,9 +40,9 @@ tasks:
       - src/**/*.so
       - src/**/*.pyd
     env:
-      HPY: trace
       CFLAGS: "-O0 -g"
       # LD_PRELOAD: libclang_rt.asan.so
     cmds:
       - task: dev:build
+      - python -X faulthandler a.py
       - pytest -x -v -s
