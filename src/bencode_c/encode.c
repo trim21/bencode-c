@@ -292,7 +292,32 @@ static int encodeTuple(Context *ctx, HPy obj) {
   return bufferWrite(ctx, "e", 1);
 }
 
+static inline int checkCircularRef(Context *ctx, HPy obj) {
+#ifdef BENCODE_USE_SET
+  int absent;
+  kh_put_PTR(ctx->seen, (khint64_t)obj, &absent);
+  if (!absent) { // not found
+    debug_print("circular reference found");
+    PyErr_SetString(PyExc_ValueError, "circular reference found");
+    return 1;
+  }
+#else
+  if (kb_get(PyObject, ctx->seen, obj) != NULL) {
+    PyErr_SetString(PyExc_ValueError, "circular reference found");
+    return 1;
+  }
+  kb_put_PyObject(ctx->seen, obj);
+#endif
+
+  return 0;
+}
+
 static int encodeAny(Context *ctx, HPy obj) {
+#ifdef BENCODE_DEBUG
+  char *_DEBUG_ss = PyUnicode_AsUTF8(PyObject_Repr(obj));
+  debug_print("object ptr=0x%p repr=%s", obj, _DEBUG_ss);
+#endif
+
   if (obj == Py_True) {
     return bufferWrite(ctx, "i1e", 3);
   }
@@ -313,34 +338,43 @@ static int encodeAny(Context *ctx, HPy obj) {
     return encodeInt(ctx, obj);
   }
 
+  if (PyList_Check(obj)) {
+    returnIfError(checkCircularRef(ctx, obj));
+    int r = encodeList(ctx, obj);
+
 #ifdef BENCODE_USE_SET
-  debug_print("object ptr=0x%p", obj);
-  int absent;
-  kh_put_PTR(ctx->seen, (khint64_t)obj, &absent);
-  if (!absent) { // not found
-    debug_print("found loop object");
-    PyErr_SetString(PyExc_ValueError, "object loop found");
-    return 1;
-  }
+    kh_del_PTR(ctx->seen, (khint64_t)obj);
 #else
-  if (kb_get(PyObject, ctx->seen, obj) == NULL) {
-    kb_put_PyObject(ctx->seen, obj);
-  } else {
-    PyErr_SetString(PyExc_ValueError, "object loop found");
-    return 1;
-  }
+    kb_del_PyObject(ctx->seen, obj);
 #endif
 
-  if (PyList_Check(obj)) {
-    return encodeList(ctx, obj);
+    return r;
   }
 
   if (PyTuple_Check(obj)) {
-    return encodeTuple(ctx, obj);
+    returnIfError(checkCircularRef(ctx, obj));
+    int r = encodeTuple(ctx, obj);
+
+#ifdef BENCODE_USE_SET
+    kh_del_PTR(ctx->seen, (khint64_t)obj);
+#else
+    kb_del_PyObject(ctx->seen, obj);
+#endif
+
+    return r;
   }
 
   if (PyDict_Check(obj)) {
-    return encodeDict(ctx, obj);
+    returnIfError(checkCircularRef(ctx, obj));
+    int r = encodeDict(ctx, obj);
+
+#ifdef BENCODE_USE_SET
+    kh_del_PTR(ctx->seen, (khint64_t)obj);
+#else
+    kb_del_PyObject(ctx->seen, obj);
+#endif
+
+    return r;
   }
 
   // Unsupported type, raise TypeError

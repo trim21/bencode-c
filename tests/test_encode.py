@@ -151,7 +151,9 @@ def test_recursive_object():
     assert bencode([b, b, b, b])
     assert bencode({b: b})
 
+    bencode([[1, 2, 3]] * 3)
+
     d = {}
     d["a"] = d
-    with pytest.raises(ValueError, match="object loop found"):
+    with pytest.raises(ValueError, match="circular reference found"):
         assert bencode(d)

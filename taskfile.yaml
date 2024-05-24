@@ -40,8 +40,15 @@ tasks:
   build:dev:
     env:
       BENCODE_DEBUG: '1'
+    sources:
+      - src/**/*.c
+      - src/**/*.h
+    generates:
+      - src/**/*.so
+      - src/**/*.pyd
     cmds:
-      - task: build:inplace
+      - cmd: python setup.py build_ext --force --inplace # --debug
+        silent: true
 
   dev:
     sources:
@@ -55,10 +62,10 @@ tasks:
       - src/**/*.so
       - src/**/*.pyd
     env:
-      CFLAGS: "-O0 -g"
+      #      CFLAGS: "-O0 -g"
       PYTHONPATH: src
       # LD_PRELOAD: libclang_rt.asan.so
     cmds:
       - task: build:dev
-      - cmd: python -X faulthandler a.py
       - pytest -x -v -s
+      - cmd: python -X faulthandler a.py

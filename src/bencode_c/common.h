@@ -7,7 +7,7 @@
 
 #define NON_SUPPORTED_TYPE_MESSAGE                                                                 \
   "invalid type '%s', "                                                                            \
-  "bencode only support bytes, Str, "                                                              \
+  "bencode only support bytes, str, "                                                              \
   "int, list, tuple, dict and bool(encoded as 0/1, decoded as int)"
 
 #ifdef BENCODE_DEBUG
