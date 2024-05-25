@@ -2,56 +2,16 @@
 
 #include "common.h"
 
+#include "khash.h"
+KHASH_SET_INIT_INT64(PTR);
+
 #define defaultBufferSize 4096
-
-// Check windows
-// #if _WIN32 || _WIN64
-// #if _WIN64
-// #define ENVIRONMENT64
-// #else
-// #define ENVIRONMENT32
-// #endif
-// #endif
-
-// Check GCC
-// #if __GNUC__
-// #if __x86_64__ || __ppc64__
-// #define ENVIRONMENT64
-// #else
-// #define ENVIRONMENT32
-// #endif
-// #endif
-#include <kbtree.h>
-#define elem_cmp(a, b) (a - b)
-
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
-#pragma GCC diagnostic ignored "-Wunused-function"
-#else
-#pragma warning(push)
-#pragma warning(disable : 4090)
-#pragma warning(disable : 4244)
-#endif
-
-KBTREE_INIT(PyObject, PyObject *, elem_cmp)
-
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#else
-#pragma warning(pop)
-#endif
-
-//  #ifdef ENVIRONMENT64
-//  #else
-//  KHASH_SET_INIT_INT(pyObj);
-//  #endif
 
 typedef struct ctx {
   char *buf;
   size_t index;
   size_t cap;
-  kbtree_t(PyObject) * seen;
+  khash_t(PTR) * seen;
 } Context;
 
 #ifdef _MSC_VER
@@ -61,6 +21,7 @@ static int bufferWriteFormat(Context *buf, const char *format, ...)
     __attribute__((format(printf, 2, 3)));
 #endif
 
+// TODO: reuse Context
 static Context newContext(int *res) {
   //  Context b = {.seen = NULL};
   Context b = {};
@@ -74,15 +35,14 @@ static Context newContext(int *res) {
 
   b.index = 0;
   b.cap = defaultBufferSize;
-
-  b.seen = kb_init(PyObject, 100);
+  b.seen = kh_init(PTR);
 
   return b;
 }
 
 static void freeContext(Context ctx) {
   if (ctx.seen != NULL) {
-    kb_destroy(PyObject, ctx.seen);
+    kh_destroy(PTR, ctx.seen);
   }
   free(ctx.buf);
 }

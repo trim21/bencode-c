@@ -9,12 +9,13 @@ PyObject *BencodeDecodeError;
 PyDoc_STRVAR(__bdecode_doc__, "bdecode(b: bytes, /) -> Any\n"
                               "--\n\n"
                               "decode bytes to python object");
-PyMethodDef decodeImpl = {
-    .ml_name = "bdecode",
-    .ml_meth = bdecode,
-    .ml_flags = METH_O,
-    .ml_doc = __bdecode_doc__,
-};
+PyMethodDef decodeImpl[] = {{
+                                .ml_name = "bdecode",
+                                .ml_meth = bdecode,
+                                .ml_flags = METH_O,
+                                .ml_doc = __bdecode_doc__,
+                            },
+                            {NULL, NULL, 0, NULL}};
 // module level variable
 
 static PyObject *decodeAny(const char *buf, Py_ssize_t *index, Py_ssize_t size);

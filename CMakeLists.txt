@@ -11,6 +11,7 @@ include_directories(${Python3_INCLUDE_DIRS})
 include_directories(src/bencode_c)
 
 include_directories(vendor/klib)
+include_directories(vendor/hashmap)
 
 add_executable(
         bencode_c
@@ -21,4 +22,5 @@ add_executable(
         src/bencode_c/encode.c
         src/bencode_c/str.h
         src/bencode_c/ctx.h
+        src/bencode_c/hashmap.h
 )

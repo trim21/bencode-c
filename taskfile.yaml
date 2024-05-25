@@ -47,7 +47,7 @@ tasks:
       - src/**/*.so
       - src/**/*.pyd
     cmds:
-      - cmd: python setup.py build_ext --force --inplace --debug
+      - cmd: python setup.py build_ext --force --inplace # --debug
         silent: true
 
   dev:
@@ -67,5 +67,6 @@ tasks:
       # LD_PRELOAD: libclang_rt.asan.so
     cmds:
       - task: build:dev
+      - python -X faulthandler -c 'import bencode_c'
       - pytest -x -v -s
-      - cmd: python -X faulthandler a.py
+#      - cmd: python -X faulthandler a.py

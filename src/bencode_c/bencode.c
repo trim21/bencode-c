@@ -3,13 +3,13 @@
 #include "common.h"
 
 extern HPy errTypeMessage;
-extern PyMethodDef encodeImpl;
+extern PyMethodDef encodeImpl[];
 extern HPy BencodeEncodeError;
 
-extern PyMethodDef decodeImpl;
+extern PyMethodDef decodeImpl[];
 extern HPy BencodeDecodeError;
 
-PyModuleDef moduleDef = {
+static PyModuleDef moduleDef = {
     .m_base = PyModuleDef_HEAD_INIT,
     .m_name = "_bencode",
     .m_doc = "bit-torrent bencode library",
@@ -22,11 +22,11 @@ PyMODINIT_FUNC PyInit__bencode(void) {
     return NULL;
   }
 
-  if (PyModule_AddFunctions(m, &encodeImpl)) {
+  if (PyModule_AddFunctions(m, encodeImpl)) {
     return NULL;
   }
 
-  if (PyModule_AddFunctions(m, &decodeImpl)) {
+  if (PyModule_AddFunctions(m, decodeImpl)) {
     return NULL;
   }
 

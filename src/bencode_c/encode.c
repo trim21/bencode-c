@@ -26,12 +26,13 @@ PyObject *BencodeEncodeError;
 PyDoc_STRVAR(__bencode_doc__, "bencode(v: Any, /) -> bytes\n"
                               "--\n\n"
                               "encode python object to bytes");
-PyMethodDef encodeImpl = {
-    .ml_name = "bencode",
-    .ml_meth = bencode,
-    .ml_flags = METH_O,
-    .ml_doc = __bencode_doc__,
-};
+PyMethodDef encodeImpl[] = {{
+                                .ml_name = "bencode",
+                                .ml_meth = bencode,
+                                .ml_flags = METH_O,
+                                .ml_doc = __bencode_doc__,
+                            },
+                            {NULL, NULL, 0, NULL}};
 // module level variable
 
 HPy errTypeMessage;
@@ -303,22 +304,24 @@ static int encodeTuple(Context *ctx, HPy obj) {
   return bufferWrite(ctx, "e", 1);
 }
 
-static inline int checkCircularRef(Context *ctx, HPy obj) {
-  if (kb_get(PyObject, ctx->seen, obj) != NULL) {
-    PyErr_SetString(PyExc_ValueError, "circular reference found");
-    return 1;
-  }
-  kb_put_PyObject(ctx->seen, obj);
-
-  return 0;
-}
+#define encodeComposeObject(ctx, obj, encoder)                                                     \
+  do {                                                                                             \
+    debug_print("put object %p to seen", obj);                                                     \
+    int absent;                                                                                    \
+    kh_put_PTR(ctx->seen, (khint64_t)obj, &absent);                                                \
+    debug_print("after put object %p to seen", obj);                                               \
+    if (!absent) {                                                                                 \
+      debug_print("circular reference found");                                                     \
+      PyErr_SetString(PyExc_ValueError, "circular reference found");                               \
+      return 1;                                                                                    \
+    }                                                                                              \
+    int r = encoder(ctx, obj);                                                                     \
+    khint64_t key = kh_get_PTR(ctx->seen, (khint64_t)obj);                                         \
+    kh_del_PTR(ctx->seen, key);                                                                    \
+    return r;                                                                                      \
+  } while (0)
 
 static int encodeAny(Context *ctx, HPy obj) {
-#ifdef BENCODE_DEBUG
-  char *_DEBUG_ss = PyUnicode_AsUTF8(PyObject_Repr(obj));
-  debug_print("object ptr=0x%p repr=%s", obj, _DEBUG_ss);
-#endif
-
   if (obj == Py_True) {
     return bufferWrite(ctx, "i1e", 3);
   }
@@ -340,30 +343,27 @@ static int encodeAny(Context *ctx, HPy obj) {
   }
 
   if (PyList_Check(obj)) {
-    returnIfError(checkCircularRef(ctx, obj));
-    int r = encodeList(ctx, obj);
-
-    kb_del_PyObject(ctx->seen, obj);
-
-    return r;
+    encodeComposeObject(ctx, obj, encodeList);
+    //    returnIfError(checkCircularRef(ctx, obj));
+    //    int r = encodeList(ctx, obj);
+    //    deleteKey(ctx, obj);
+    //    return r;
   }
 
   if (PyTuple_Check(obj)) {
-    returnIfError(checkCircularRef(ctx, obj));
-    int r = encodeTuple(ctx, obj);
-
-    kb_del_PyObject(ctx->seen, obj);
-
-    return r;
+    encodeComposeObject(ctx, obj, encodeTuple);
+    //    returnIfError(checkCircularRef(ctx, obj));
+    //    int r = encodeTuple(ctx, obj);
+    //    deleteKey(ctx, obj);
+    //    return r;
   }
 
   if (PyDict_Check(obj)) {
-    returnIfError(checkCircularRef(ctx, obj));
-    int r = encodeDict(ctx, obj);
-
-    kb_del_PyObject(ctx->seen, obj);
-
-    return r;
+    encodeComposeObject(ctx, obj, encodeDict);
+    //    returnIfError(checkCircularRef(ctx, obj));
+    //    int r = encodeDict(ctx, obj);
+    //    deleteKey(ctx, obj);
+    //    return r;
   }
 
   // Unsupported type, raise TypeError
@@ -391,7 +391,6 @@ static int encodeAny(Context *ctx, HPy obj) {
 
 // mod is the module object
 static HPy bencode(HPy mod, HPy obj) {
-  debug_print("");
   int bufferAlloc = 0;
   Context ctx = newContext(&bufferAlloc);
   if (bufferAlloc) {
