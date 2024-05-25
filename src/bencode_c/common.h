@@ -18,6 +18,7 @@
 
 #ifdef _MSC_VER
 #define debug_print(fmt, ...)                                                                      \
+                                                                                                   \
   do {                                                                                             \
     printf(__FILE__);                                                                              \
     printf(":");                                                                                   \
@@ -29,6 +30,7 @@
   } while (0)
 
 #else
+
 #define debug_print(fmt, ...)                                                                      \
   do {                                                                                             \
     printf(__FILE__);                                                                              \

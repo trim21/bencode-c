@@ -39,26 +39,10 @@ static inline PyObject *formatError(HPy err, const char *format, ...) {
   return NULL;
 }
 
-#define assertBytesNotEnd(index, size, msg)                                                        \
-  do {                                                                                             \
-  }                                                                                                \
-  white(0)
-
-#ifdef __GNUC__
-
-#define decodingError(format, ...)                                                                 \
-  do {                                                                                             \
-    formatError(BencodeDecodeError, format, __VA_ARGS__);                                          \
-  } while (0)
-
-#else
-
 #define decodingError(format, ...)                                                                 \
   do {                                                                                             \
     formatError(BencodeDecodeError, format, ##__VA_ARGS__);                                        \
   } while (0)
-
-#endif
 
 static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
   Py_ssize_t index_e = 0;
