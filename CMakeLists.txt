@@ -22,5 +22,4 @@ add_executable(
         src/bencode_c/encode.c
         src/bencode_c/str.h
         src/bencode_c/ctx.h
-        src/bencode_c/hashmap.h
 )

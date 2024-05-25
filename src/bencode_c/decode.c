@@ -39,10 +39,26 @@ static inline PyObject *formatError(HPy err, const char *format, ...) {
   return NULL;
 }
 
+#define assertBytesNotEnd(index, size, msg)                                                        \
+  do {                                                                                             \
+  }                                                                                                \
+  white(0)
+
+#ifdef __GNUC__
+
 #define decodingError(format, ...)                                                                 \
   do {                                                                                             \
     formatError(BencodeDecodeError, format, __VA_ARGS__);                                          \
   } while (0)
+
+#else
+
+#define decodingError(format, ...)                                                                 \
+  do {                                                                                             \
+    formatError(BencodeDecodeError, format, ##__VA_ARGS__);                                        \
+  } while (0)
+
+#endif
 
 static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
   Py_ssize_t index_e = 0;
@@ -205,7 +221,11 @@ static PyObject *decodeList(const char *buf, Py_ssize_t *index, Py_ssize_t size)
 
   PyObject *l = PyList_New(0);
 
-  while (buf[*index] != 'e') {
+  while (1) {
+    if (buf[*index] == 'e') {
+      break;
+    }
+
     PyObject *obj = decodeAny(buf, index, size);
     if (obj == NULL) {
       Py_DecRef(l);
@@ -215,6 +235,11 @@ static PyObject *decodeList(const char *buf, Py_ssize_t *index, Py_ssize_t size)
     PyList_Append(l, obj);
 
     Py_DecRef(obj);
+
+    if (*index >= size) {
+      decodingError("bytes end when decoding list");
+      return NULL;
+    }
   }
 
   *index = *index + 1;
@@ -222,22 +247,27 @@ static PyObject *decodeList(const char *buf, Py_ssize_t *index, Py_ssize_t size)
   return l;
 }
 
-static void decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyObject *d) {
+static int decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyObject *d) {
   *index = *index + 1;
   const char *lastKey = NULL;
   Py_ssize_t lastKeyLen = 0;
   const char *currentKey;
   Py_ssize_t currentKeyLen;
-  while (buf[*index] != 'e') {
+
+  while (1) {
+    if (buf[*index] == 'e') {
+      break;
+    }
+
     PyObject *key = decodeBytes(buf, index, size);
     if (key == NULL) {
-      return;
+      return 1;
     }
 
     PyObject *obj = decodeAny(buf, index, size);
     if (obj == NULL) {
       Py_DecRef(key);
-      return;
+      return 1;
     }
     currentKeyLen = PyBytes_Size(key);
     currentKey = PyBytes_AsString(key);
@@ -246,12 +276,12 @@ static void decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyOb
       int keyCmp = strCompare(currentKey, currentKeyLen, lastKey, lastKeyLen);
       if (keyCmp < 0) {
         decodingError("invalid dict, key not sorted. index %zd", *index);
-        return;
+        return 1;
       }
       if (keyCmp == 0) {
         decodingError("invalid dict, find duplicated keys %.*s. index %zd", currentKeyLen,
                       currentKey, *index);
-        return;
+        return 1;
       }
     }
     lastKey = currentKey;
@@ -259,8 +289,16 @@ static void decodeDict(const char *buf, Py_ssize_t *index, Py_ssize_t size, PyOb
     PyDict_SetItem(d, key, obj);
     Py_DecRef(key);
     Py_DecRef(obj);
+
+    if (*index >= size) {
+      decodingError("bytes end when decoding dict");
+      return 1;
+    }
   }
+
   *index = *index + 1;
+
+  return 0;
 }
 
 static PyObject *decodeAny(const char *buf, Py_ssize_t *index, Py_ssize_t size) {
@@ -282,9 +320,12 @@ static PyObject *decodeAny(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
   // dict
   if (buf[*index] == 'd') {
     PyObject *dict = PyDict_New();
-
-    decodeDict(buf, index, size, dict);
     if (dict == NULL) {
+      Py_DecRef(dict);
+      return NULL;
+    }
+
+    if (decodeDict(buf, index, size, dict)) {
       Py_DecRef(dict);
       return NULL;
     }
@@ -303,6 +344,10 @@ static PyObject *bdecode(PyObject *self, PyObject *b) {
   }
 
   Py_ssize_t size = PyBytes_Size(b);
+  if (size == 0) {
+    decodingError("can't decode empty bytes");
+    return NULL;
+  }
   const char *buf = PyBytes_AsString(b);
 
   Py_ssize_t index = 0;

@@ -70,6 +70,7 @@ def test_decode_str():
         b"l",
         b"lll",
         # directory keys not sorted for {'foo': 1, 'spam': 2}
+        b"d3:foo4:spam3:bari42e",
         b"d3:foo4:spam3:bari42ee",
     ],
 )
