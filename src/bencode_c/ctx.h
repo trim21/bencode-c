@@ -74,7 +74,7 @@ static int bufferWrite(Context *ctx, const char *data, HPy_ssize_t size) {
 }
 
 static int bufferWriteChar(Context *buf, const char c) {
-  debug_print("free context");
+  debug_print("bufferWriteChar");
   if (bufferGrow(buf, 1)) {
     return 1;
   }

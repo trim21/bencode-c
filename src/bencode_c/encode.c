@@ -75,6 +75,34 @@ static void freeKeyValueList(KeyValuePair *list, HPy_ssize_t len) {
   free(list);
 }
 
+static int checkKeys(KeyValuePair *pp, size_t size) {
+  // check duplicated keys
+  const char *lastKey = pp[0].key;
+  size_t lastKeylen = pp[0].keylen;
+  const char *currentKey = NULL;
+  size_t currentKeylen;
+
+  for (HPy_ssize_t i = 1; i < size; i++) {
+    KeyValuePair item = pp[i];
+
+    currentKey = item.key;
+    currentKeylen = item.keylen;
+
+    if (lastKeylen == currentKeylen) {
+      debug_print("lastKey=%s, currentKey=%s", lastKey, currentKey);
+      if (strncmp(lastKey, currentKey, lastKeylen) == 0) {
+        bencodeError("find duplicated keys with str and bytes in dict");
+        return 1;
+      }
+    }
+
+    lastKey = currentKey;
+    lastKeylen = currentKeylen;
+  }
+
+  return 0;
+}
+
 static int buildDictKeyList(HPy obj, struct keyValuePair **pairs, HPy_ssize_t *count) {
   *count = PyDict_Size(obj);
 
@@ -104,7 +132,7 @@ static int buildDictKeyList(HPy obj, struct keyValuePair **pairs, HPy_ssize_t *c
     if (PyUnicode_Check(key)) {
       keyAsBytes = PyUnicode_AsUTF8String(key);
     } else if (!PyBytes_Check(key)) {
-      bencodeError("dict key must be Str or bytes");
+      bencodeError("dict key must be str or bytes");
       Py_DecRef(keys);
       return 1;
     }
@@ -134,31 +162,7 @@ static int buildDictKeyList(HPy obj, struct keyValuePair **pairs, HPy_ssize_t *c
 
   qsort(pp, *count, sizeof(KeyValuePair), sortKeyValuePair);
 
-  // check duplicated keys
-  const char *lastKey = pp[0].key;
-  size_t lastKeylen = pp[0].keylen;
-  const char *currentKey = NULL;
-  size_t currentKeylen;
-
-  for (HPy_ssize_t i = 1; i < *count; i++) {
-    KeyValuePair item = pp[i];
-
-    currentKey = item.key;
-    currentKeylen = item.keylen;
-
-    if (lastKeylen == currentKeylen) {
-      debug_print("lastKey=%s, currentKey=%s", lastKey, currentKey);
-      if (strncmp(lastKey, currentKey, lastKeylen) == 0) {
-        bencodeError("find duplicated keys with str and bytes in dict");
-        return 1;
-      }
-    }
-
-    lastKey = currentKey;
-    lastKeylen = currentKeylen;
-  }
-
-  return 0;
+  return checkKeys(pp, *count);
 }
 
 #if PY_MINOR_VERSION >= 10
@@ -334,6 +338,125 @@ static int encodeTuple(Context *ctx, HPy obj) {
   return bufferWrite(ctx, "e", 1);
 }
 
+#if PY_MINOR_VERSION >= 10
+// types.MappingProxyType
+static int encodeMappingProxyType(Context *ctx, HPy obj) {
+  bufferWriteChar(ctx, 'd');
+  HPy_ssize_t size = PyObject_Size(obj);
+  if (size == 0) {
+    bufferWriteChar(ctx, 'e');
+    return 0;
+  }
+
+  debug_print("try get items");
+  HPy items = PyObject_CallMethod(obj, "items", NULL);
+  if (items == NULL) {
+    if (PyErr_Occurred()) {
+      return 1;
+    }
+    runtimeError("failed to get items from MappingProxy");
+    return 1;
+  }
+
+  HPy iter = PyObject_GetIter(items);
+
+  debug_print("get items ok");
+
+  debug_print("create list");
+  KeyValuePair *list = malloc((size) * (sizeof(KeyValuePair)));
+  for (int i = 0; i < size; ++i) {
+    debug_print("%d/%d", i, size);
+    HPy keyValue = PyIter_Next(iter);
+    if (keyValue == NULL) {
+      Py_DecRef(keyValue);
+      if (PyErr_Occurred()) {
+        goto __CLEAN_UP;
+      }
+      runtimeError("failed to get key value tuple from items");
+      goto __CLEAN_UP;
+    }
+
+    debug_print("get key from keyValue tuple");
+    HPy key = PyTuple_GetItem(keyValue, 0);
+    if (key == NULL) {
+      Py_DecRef(keyValue);
+      if (PyErr_Occurred()) {
+        goto __CLEAN_UP;
+      }
+      runtimeError("failed to get keys from MappingProxy");
+      goto __CLEAN_UP;
+    }
+
+    HPy keyAsBytes = NULL;
+    if (PyUnicode_Check(key)) {
+      keyAsBytes = PyUnicode_AsUTF8String(key);
+    } else if (!PyBytes_Check(key)) {
+      bencodeError("dict key must be str or bytes");
+      Py_DecRef(keyValue);
+      goto __CLEAN_UP;
+    }
+
+    debug_print("get value from keyValue tuple");
+    HPy value = PyTuple_GetItem(keyValue, 1);
+    if (value == NULL) {
+      Py_XDECREF(keyAsBytes);
+      Py_DecRef(keyValue);
+      runtimeError("failed to get value from MappingProxy");
+      goto __CLEAN_UP;
+    }
+
+    if (keyAsBytes != NULL) {
+      list[i].key = PyBytes_AsString(keyAsBytes);
+      list[i].keylen = PyBytes_Size(keyAsBytes);
+      list[i].pyKey = keyAsBytes;
+    } else {
+      list[i].key = PyBytes_AsString(key);
+      list[i].keylen = PyBytes_Size(key);
+      list[i].pyKey = NULL;
+    }
+
+    list[i].value = value;
+    Py_DecRef(keyValue);
+  };
+
+  qsort(list, size, sizeof(KeyValuePair), sortKeyValuePair);
+
+  if (checkKeys(list, size)) {
+    goto __CLEAN_UP;
+  }
+
+  for (HPy_ssize_t i = 0; i < size; i++) {
+    debug_print("encode key[%zd]", i);
+
+    struct keyValuePair keyValue = list[i];
+
+    int err = 0;
+    err |= bufferWriteFormat(ctx, "%ld", keyValue.keylen);
+    err |= bufferWriteChar(ctx, ':');
+    err |= bufferWrite(ctx, keyValue.key, keyValue.keylen);
+    err |= encodeAny(ctx, keyValue.value);
+
+    if (err) {
+      goto __CLEAN_UP;
+    }
+  }
+
+  Py_DecRef(items);
+  freeKeyValueList(list, size);
+  bufferWriteChar(ctx, 'e');
+  return 0;
+
+__CLEAN_UP:;
+  Py_XDECREF(items);
+  if (list != NULL) {
+    freeKeyValueList(list, size);
+  }
+  Py_XDECREF(iter);
+  return 1;
+}
+
+#endif
+
 #define encodeComposeObject(ctx, obj, encoder)                                                     \
   do {                                                                                             \
     debug_print("put object %p to seen", obj);                                                     \
@@ -396,8 +519,18 @@ static int encodeAny(Context *ctx, HPy obj) {
     return err || bufferWrite(ctx, data, size);
   }
 
-  // Unsupported type, raise TypeError
+#if PY_MINOR_VERSION >= 10
 
+  // types.MappingProxyType
+  debug_print("test if mapping proxy");
+  if (PyType_IsSubtype(obj->ob_type, &PyDictProxy_Type)) {
+    debug_print("encode mapping proxy");
+    encodeComposeObject(ctx, obj, encodeMappingProxyType);
+  }
+
+#endif
+
+  // Unsupported type, raise TypeError
   HPy typ = PyObject_Type(obj);
   if (typ == NULL) {
     runtimeError("failed to get type of object");

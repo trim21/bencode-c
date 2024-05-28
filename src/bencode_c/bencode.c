@@ -20,6 +20,10 @@ PyMODINIT_FUNC PyInit__bencode(void) {
     return NULL;
   }
 
+  if (PyModule_AddIntConstant(m, "__BUILD_PY_MINOR_VERSION__", PY_MINOR_VERSION)) {
+    return NULL;
+  }
+
   if (PyModule_AddFunctions(m, encodeImpl)) {
     return NULL;
   }

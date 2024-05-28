@@ -1,8 +1,5 @@
 version: 3
 tasks:
-  #  build:
-  #    cmds:
-  #      - cmd: python setup.py bdist_wheel
   bump:
     vars:
       VERSION:
@@ -12,43 +9,20 @@ tasks:
       - 'git commit -m "bump: {{.VERSION}}"'
       - 'git tag "v{{.VERSION}}" -m "v{{.VERSION}}"'
 
-  c-fmt:
+  fmt:
     cmd: clang-format -i src/bencode_c/*.c src/bencode_c/*.h
 
   build:
+    method: checksum
     sources:
-      - src/**/*.c
-      - src/**/*.h
+      - setup.py
+      - ./src/bencode_c/*.c
+      - ./src/bencode_c/*.h
     generates:
-      - src/**/*.so
-      - src/**/*.pyd
+      - ./src/bencode_c/*.so
+      - ./src/bencode_c/*.pyd
     cmds:
-      - cmd: python setup.py build_ext --force --inplace # --debug
-        silent: true
-
-  build:inplace:
-    sources:
-      - src/**/*.c
-      - src/**/*.h
-    generates:
-      - src/**/*.so
-      - src/**/*.pyd
-    cmds:
-      - cmd: python setup.py build_ext --force --inplace # --debug
-        silent: true
-
-  build:dev:
-#    env:
-#      BENCODE_DEBUG: '1'
-    sources:
-      - src/**/*.c
-      - src/**/*.h
-    generates:
-      - src/**/*.so
-      - src/**/*.pyd
-    cmds:
-      - cmd: python setup.py build_ext --force --inplace # --debug
-        silent: true
+      - cmd: python setup.py build_ext --inplace
 
   dev:
     sources:
@@ -72,3 +46,11 @@ tasks:
       - pytest -x -v -s
       - task: build:inplace
       - cmd: python -X faulthandler a.py
+
+  test:
+    deps:
+      - build
+    env:
+      PYTHONPATH: src
+    cmds:
+      - pytest -x -v -s

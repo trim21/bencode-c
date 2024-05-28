@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import collections
+from pathlib import Path
+import sys
+import types
 from typing import Any
 
+import bencode_c
 import pytest
 
 from bencode_c import BencodeEncodeError, bencode
+from bencode_c._bencode import __BUILD_PY_MINOR_VERSION__
 
 
 def test_exception_when_strict():
@@ -158,3 +163,17 @@ def test_recursive_object():
     d["a"] = d
     with pytest.raises(ValueError, match="circular reference found"):
         assert bencode(d)
+
+
+@pytest.mark.skipif(
+    __BUILD_PY_MINOR_VERSION__ < 10,
+    reason="testing pre-build package",
+)
+@pytest.mark.skipif(
+    sys.version_info[1] < 10,
+    reason="py<3.10 doesn't have stable for types.MappingProxyType",
+)
+def test_mapping_proxy():
+    assert (
+        bencode(types.MappingProxyType({b"spam": [b"a", b"b"]})) == b"d4:spaml1:a1:bee"
+    )
