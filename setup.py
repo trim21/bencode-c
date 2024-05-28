@@ -6,7 +6,7 @@ import os
 import sys
 
 if sys.version_info[:2] > (3, 8):
-    macro = [("Py_LIMITED_API", sys.hexversion.to_bytes().hex())]
+    macro = [("Py_LIMITED_API", hex(sys.hexversion))]
     options = {"bdist_wheel": {"py_limited_api": f"cp3{sys.version_info[1]}"}}
 else:
     macro = [("Py_LIMITED_API", "0x03080000")]
