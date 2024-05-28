@@ -165,8 +165,8 @@ static int buildDictKeyList(HPy obj, struct keyValuePair **pairs, HPy_ssize_t *c
 // TODO: use py buffer >= 3.11
 static int encodeBytes(Context *ctx, HPy obj) {
   HPy_ssize_t size;
-  const char *data = PyBytes_AsStringAndSize(obj, &size);
-  if (data == NULL) {
+  char *data;
+  if (PyBytes_AsStringAndSize(obj, &data, &size)) {
     return 1;
   }
 
