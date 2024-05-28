@@ -4,7 +4,7 @@ from glob import glob
 from setuptools import setup, Extension, find_packages
 import os
 
-macro = []
+macro = [("Py_LIMITED_API", "0x03080000")]
 
 extra_compile_args = None
 if os.environ.get("BENCODE_DEBUG") == "1":

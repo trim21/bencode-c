@@ -161,6 +161,35 @@ static int buildDictKeyList(HPy obj, struct keyValuePair **pairs, HPy_ssize_t *c
   return 0;
 }
 
+#if PY_MINOR_VERSION >= 10
+// TODO: use py buffer >= 3.11
+static int encodeBytes(Context *ctx, HPy obj) {
+  HPy_ssize_t size;
+  const char *data = PyBytes_AsStringAndSize(obj, &size);
+  if (data == NULL) {
+    return 1;
+  }
+
+  int err = bufferWriteFormat(ctx, "%zd", size);
+  err = err || bufferWriteChar(ctx, ':');
+  return err || bufferWrite(ctx, data, size);
+}
+
+static int encodeStr(Context *ctx, HPy obj) {
+  HPy_ssize_t size;
+  const char *data = PyUnicode_AsUTF8AndSize(obj, &size);
+  if (data == NULL) {
+    return 1;
+  }
+
+  int err = bufferWriteFormat(ctx, "%zd", size);
+  err = err || bufferWriteChar(ctx, ':');
+  return err || bufferWrite(ctx, data, size);
+}
+
+#else
+
+// TODO: remove this after we drop py39
 static int encodeBytes(Context *ctx, HPy obj) {
   const char *data = PyBytes_AsString(obj);
   if (data == NULL) {
@@ -174,21 +203,6 @@ static int encodeBytes(Context *ctx, HPy obj) {
   return err || bufferWrite(ctx, data, size);
 }
 
-#if PY_MINOR_VERSION > 10
-
-// TODO: use PyUnicode_AsUTF8AndSize after 3.10
-static int encodeStr(Context *ctx, HPy obj) {
-  HPy b = PyUnicode_AsUTF8String(obj);
-
-  int err = encodeBytes(ctx, b);
-  Py_DecRef(b);
-  return err;
-}
-
-
-#else
-
-// TODO: remove this after we drop py39
 static int encodeStr(Context *ctx, HPy obj) {
   HPy b = PyUnicode_AsUTF8String(obj);
 
