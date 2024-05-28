@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include "common.h"
 #include "overflow.h"
 #include "str.h"
@@ -86,7 +88,7 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
   }
 
   if (sign > 0) {
-    unsigned long long val = 0;
+    uint64_t val = 0;
     for (Py_ssize_t i = *index; i < index_e; i++) {
       char c = buf[i] - '0';
       if (c < 0 || c > 9) {
@@ -97,8 +99,8 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
       // val = val * 10 + (buf[i] - '0')
       // but with overflow check
 
-      int of = _u128_mul_overflow(val, 10, &val);
-      of = of || _u128_add_overflow(val, c, &val);
+      int of = _u64_mul_overflow(val, 10, &val);
+      of = of || _u64_add_overflow(val, c, &val);
 
       if (of) {
         goto __OverFlow;
@@ -109,7 +111,7 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
 
     return PyLong_FromUnsignedLongLong(val);
   } else {
-    long long val = 0;
+    int64_t val = 0;
     int of;
     for (Py_ssize_t i = *index + 1; i < index_e; i++) {
       char c = buf[i] - '0';
@@ -118,15 +120,15 @@ static PyObject *decodeInt(const char *buf, Py_ssize_t *index, Py_ssize_t size) 
         return NULL;
       }
 
-      of = _i128_mul_overflow(val, 10, &val);
-      of = of || _i128_add_overflow(val, c, &val);
+      of = _i64_mul_overflow(val, 10, &val);
+      of = of || _i64_add_overflow(val, c, &val);
 
       if (of) {
         goto __OverFlow;
       }
     }
 
-    if (_i128_mul_overflow(val, sign, &val)) {
+    if (_i64_mul_overflow(val, sign, &val)) {
       goto __OverFlow;
     }
 

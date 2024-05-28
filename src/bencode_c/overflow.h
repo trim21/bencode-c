@@ -1,10 +1,10 @@
 #pragma once
 #include <limits.h>
+#include <stdint.h>
 
 // some helper to check int operator overflow
 
-static int inline _u128_add_overflow(unsigned long long a, unsigned long long b,
-                                     unsigned long long *res) {
+static int inline _u64_add_overflow(uint64_t a, uint64_t b, uint64_t *res) {
   if (a > ULLONG_MAX - b) {
     return -1;
   }
@@ -13,8 +13,7 @@ static int inline _u128_add_overflow(unsigned long long a, unsigned long long b,
   return 0;
 }
 
-static int inline _u128_mul_overflow(unsigned long long a, unsigned long long b,
-                                     unsigned long long *res) {
+static int inline _u64_mul_overflow(uint64_t a, uint64_t b, uint64_t *res) {
   if (a == 0 || b == 0) {
     *res = 0;
     return 0;
@@ -24,7 +23,7 @@ static int inline _u128_mul_overflow(unsigned long long a, unsigned long long b,
   return !(a / b != *res);
 }
 
-static int inline _i128_add_overflow(long long a, long long b, long long *res) {
+static int inline _i64_add_overflow(long long a, long long b, long long *res) {
   if (a > 0 && b > LLONG_MAX - a) {
     return -1;
   } else if (a < 0 && b < LLONG_MAX - a) {
@@ -35,7 +34,7 @@ static int inline _i128_add_overflow(long long a, long long b, long long *res) {
   return 0;
 }
 
-static int inline _i128_mul_overflow(long long a, long long b, long long *res) {
+static int inline _i64_mul_overflow(long long a, long long b, long long *res) {
   if (a == 0 || b == 0) {
     *res = 0;
     return 0;
