@@ -3,9 +3,16 @@ from glob import glob
 
 from setuptools import setup, Extension, find_packages
 import os
+import sys
 
-macro = []
+if sys.version_info[:2] > (3, 8):
+    macro = [("Py_LIMITED_API", hex(sys.hexversion))]
+    options = {"bdist_wheel": {"py_limited_api": f"cp3{sys.version_info[1]}"}}
+else:
+    macro = [("Py_LIMITED_API", "0x03080000")]
+    options = {"bdist_wheel": {"py_limited_api": "cp38"}}
 
+print(macro)
 extra_compile_args = None
 if os.environ.get("BENCODE_DEBUG") == "1":
     macro.append(("BENCODE_DEBUG", "1"))
@@ -27,5 +34,5 @@ setup(
     package_dir={"": "src"},
     package_data={"": ["*.h", "*.c", "*.pyi", "py.typed"]},
     include_package_data=True,
-    options={"bdist_wheel": {"py_limited_api": "cp38"}},
+    options=options,
 )
