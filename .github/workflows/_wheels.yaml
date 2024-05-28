@@ -25,11 +25,12 @@ jobs:
       max-parallel: 4
       matrix:
         include:
-          - { os: macos-12, arch: x86_64 }
-          - { os: macos-12, arch: arm64 }
-          - { os: windows-latest, arch: x86 }
-          - { os: windows-latest, arch: AMD64 }
-          - { os: ubuntu-latest, arch: x86_64 }
+          - {os: macos-12, arch: x86_64}
+          - {os: macos-12, arch: arm64}
+          - {os: windows-latest, arch: x86}
+          - {os: windows-latest, arch: AMD64}
+          - {os: ubuntu-latest, arch: x86_64}
+          - {os: ubuntu-latest, arch: aarch64}
     steps:
       - uses: docker/setup-qemu-action@v3
         if: matrix.os == 'ubuntu-latest'
@@ -66,22 +67,10 @@ jobs:
 
   merge-wheel-artifact:
     runs-on: ubuntu-latest
-    needs: [ 'build_wheels', 'build' ]
+    needs: ['build_wheels', 'build']
     steps:
       - name: Merge Artifacts
         uses: actions/upload-artifact/merge@v4
         with:
           name: wheel
           pattern: wheels-*
-
-  check_dist:
-    name: Check dist
-    needs: [ merge-wheel-artifact ]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: wheel
-          path: dist
-
-      - run: pipx run twine check --strict dist/*

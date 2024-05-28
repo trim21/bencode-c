@@ -14,12 +14,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-cp:
+  build:
+    concurrency:
+      group: "${{ github.workflow }}-${{ github.ref }}"
+      cancel-in-progress: true
+    uses: ./.github/workflows/_wheels.yaml
+
+  test:
+    needs: [build]
     strategy:
       max-parallel: 5
       fail-fast: false
       matrix:
-        os: [ "macos-12", "macos-13", "macos-14", "windows-latest", "ubuntu-latest" ]
+        os: ["macos-12", "macos-13", "macos-14", "windows-latest", "ubuntu-latest"]
         python-version:
           - "3.8"
           - "3.9"
@@ -27,22 +34,37 @@ jobs:
           - "3.11"
           - "3.12"
         exclude:
-          - { os: macos-14, python-version: '3.8' }
-          - { os: macos-14, python-version: '3.9' }
+          - {os: macos-14, python-version: '3.8'}
+          - {os: macos-14, python-version: '3.9'}
 
     runs-on: "${{ matrix.os }}"
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4.1.7
         with:
-          submodules: true
-
+          name: wheel
+          path: dist
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
-      - run: pip install -e '.[dev]'
+      - run: pip install -U pip
+      - run: pip install bencode-c --no-index --find-link ./dist/
+      - run: pip install -r requirements.txt
 
-      - run: python -m pytest -sv
+      - run: pytest -sv
+
+  check_dist:
+    name: Check dist
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+
+      - run: pipx run twine check --strict dist/*

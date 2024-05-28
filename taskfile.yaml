@@ -69,4 +69,5 @@ tasks:
       - task: build:dev
       - python -X faulthandler -c 'import bencode_c'
       - pytest -x -v -s
-#      - cmd: python -X faulthandler a.py
+      - task: build:inplace
+      - cmd: python -X faulthandler a.py
