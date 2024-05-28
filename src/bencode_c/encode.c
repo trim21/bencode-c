@@ -384,6 +384,18 @@ static int encodeAny(Context *ctx, HPy obj) {
     encodeComposeObject(ctx, obj, encodeDict);
   }
 
+  if (PyByteArray_Check(obj)) {
+    HPy_ssize_t size = PyByteArray_Size(obj);
+    const char *data = PyByteArray_AsString(obj);
+    if (data == NULL) {
+      return 1;
+    }
+
+    int err = bufferWriteFormat(ctx, "%zd", size);
+    err = err || bufferWriteChar(ctx, ':');
+    return err || bufferWrite(ctx, data, size);
+  }
+
   // Unsupported type, raise TypeError
 
   HPy typ = PyObject_Type(obj);

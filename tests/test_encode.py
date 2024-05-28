@@ -136,6 +136,7 @@ def test_dict_int_keys():
         # slow path overflow c long long
         (9223372036854775808, b"i9223372036854775808e"),  # longlong int +1
         (18446744073709551616, b"i18446744073709551616e"),  # unsigned long long +1
+        (bytearray([1, 2, 3]), b"3:" + b"\x01\x02\x03"),
     ],
     ids=lambda val: f"raw={val[0]!r} expected={val[1]!r}",
 )
