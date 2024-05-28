@@ -13,13 +13,6 @@ tasks:
     cmd: clang-format -i src/bencode_c/*.c src/bencode_c/*.h
 
   build:
-    deps:
-      - build:windows
-      - build:linux
-
-  build:windows:
-    silent: true
-    internal: true
     platforms:
       - windows
     sources:
@@ -27,23 +20,10 @@ tasks:
       - ./src/bencode_c/*.c
       - ./src/bencode_c/*.h
     generates:
-      - ./src/**/*.pyd
+      - ./src/**/*.{pyd,so}
     cmds:
       - cmd: python setup.py build_ext --inplace
 
-  build:linux:
-    silent: true
-    internal: true
-    platforms:
-      - linux
-    sources:
-      - setup.py
-      - ./src/bencode_c/*.c
-      - ./src/bencode_c/*.h
-    generates:
-      - ./src/**/*.so
-    cmds:
-      - cmd: python setup.py build_ext --inplace
 
   dev:
     sources:
@@ -54,10 +34,9 @@ tasks:
       - tests/*.py
       - "*.py"
     generates:
-      - src/**/*.so
-      - src/**/*.pyd
+      - src/**/*.{so,pyd}
     deps:
-      - build:dev
+      - build
     env:
       #      CFLAGS: "-O0 -g"
       PYTHONPATH: src
