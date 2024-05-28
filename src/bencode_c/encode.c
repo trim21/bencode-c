@@ -174,6 +174,8 @@ static int encodeBytes(Context *ctx, HPy obj) {
   return err || bufferWrite(ctx, data, size);
 }
 
+#if PY_MINOR_VERSION > 10
+
 // TODO: use PyUnicode_AsUTF8AndSize after 3.10
 static int encodeStr(Context *ctx, HPy obj) {
   HPy b = PyUnicode_AsUTF8String(obj);
@@ -182,6 +184,20 @@ static int encodeStr(Context *ctx, HPy obj) {
   Py_DecRef(b);
   return err;
 }
+
+
+#else
+
+// TODO: remove this after we drop py39
+static int encodeStr(Context *ctx, HPy obj) {
+  HPy b = PyUnicode_AsUTF8String(obj);
+
+  int err = encodeBytes(ctx, b);
+  Py_DecRef(b);
+  return err;
+}
+
+#endif
 
 static int encodeDict(Context *ctx, HPy obj) {
   returnIfError(bufferWrite(ctx, "d", 1));
