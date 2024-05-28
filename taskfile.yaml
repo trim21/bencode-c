@@ -38,8 +38,8 @@ tasks:
         silent: true
 
   build:dev:
-    env:
-      BENCODE_DEBUG: '1'
+#    env:
+#      BENCODE_DEBUG: '1'
     sources:
       - src/**/*.c
       - src/**/*.h
@@ -61,12 +61,13 @@ tasks:
     generates:
       - src/**/*.so
       - src/**/*.pyd
+    deps:
+      - build:dev
     env:
       #      CFLAGS: "-O0 -g"
       PYTHONPATH: src
       # LD_PRELOAD: libclang_rt.asan.so
     cmds:
-      - task: build:dev
       - python -X faulthandler -c 'import bencode_c'
       - pytest -x -v -s
       - task: build:inplace

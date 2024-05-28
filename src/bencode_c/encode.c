@@ -306,7 +306,18 @@ static int encodeTuple(Context *ctx, HPy obj) {
 
 #define encodeComposeObject(ctx, obj, encoder)                                                     \
   do {                                                                                             \
+    debug_print("put object %p to seen", obj);                                                     \
+    int absent;                                                                                    \
+    kh_put_PTR(ctx->seen, (khint64_t)obj, &absent);                                                \
+    debug_print("after put object %p to seen", obj);                                               \
+    if (!absent) {                                                                                 \
+      debug_print("circular reference found");                                                     \
+      PyErr_SetString(PyExc_ValueError, "circular reference found");                               \
+      return 1;                                                                                    \
+    }                                                                                              \
     int r = encoder(ctx, obj);                                                                     \
+    khint64_t key = kh_get_PTR(ctx->seen, (khint64_t)obj);                                         \
+    kh_del_PTR(ctx->seen, key);                                                                    \
     return r;                                                                                      \
   } while (0)
 
@@ -368,14 +379,7 @@ static int encodeAny(Context *ctx, HPy obj) {
 
 // mod is the module object
 static HPy bencode(HPy mod, HPy obj) {
-  //  __try {
-  //    debug_print("try");
-  //  } __finally {
-  //    debug_print("finally");
-  //    // termination code
-  //  }
   int bufferAlloc = 0;
-  //  Context ctx __attribute__((__cleanup__(freeContext))) = newContext(&bufferAlloc);
   Context ctx = newContext(&bufferAlloc);
   if (bufferAlloc) {
     return NULL;
