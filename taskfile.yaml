@@ -13,14 +13,35 @@ tasks:
     cmd: clang-format -i src/bencode_c/*.c src/bencode_c/*.h
 
   build:
-    method: checksum
+    deps:
+      - build:windows
+      - build:linux
+
+  build:windows:
+    silent: true
+    internal: true
+    platforms:
+      - windows
     sources:
       - setup.py
       - ./src/bencode_c/*.c
       - ./src/bencode_c/*.h
     generates:
-      - ./src/bencode_c/*.so
-      - ./src/bencode_c/*.pyd
+      - ./src/**/*.pyd
+    cmds:
+      - cmd: python setup.py build_ext --inplace
+
+  build:linux:
+    silent: true
+    internal: true
+    platforms:
+      - linux
+    sources:
+      - setup.py
+      - ./src/bencode_c/*.c
+      - ./src/bencode_c/*.h
+    generates:
+      - ./src/**/*.so
     cmds:
       - cmd: python setup.py build_ext --inplace
 
@@ -48,6 +69,9 @@ tasks:
       - cmd: python -X faulthandler a.py
 
   test:
+    sources:
+      - src/**/*
+      - tests/**/*
     deps:
       - build
     env:
