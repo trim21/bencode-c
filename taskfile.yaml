@@ -24,14 +24,12 @@ tasks:
     cmds:
       - cmd: python setup.py build_ext --inplace
 
-
   dev:
     sources:
       - src/**/*.c
       - src/**/*.h
       - src/**/*.py
       - tests/**/*.py
-      - tests/*.py
       - "*.py"
     generates:
       - src/**/*.{so,pyd}

@@ -83,7 +83,7 @@ jobs:
           cache: "pip"
 
       - run: pip install -U pip
-      - run: pip install bencode-c --no-index --find-link ./dist/
+      - run: pip install bencode-c --no-index --find-links ./dist/
       - run: pip install -r requirements.txt
 
       - run: pytest -sv
