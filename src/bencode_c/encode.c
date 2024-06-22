@@ -75,7 +75,7 @@ static void freeKeyValueList(KeyValuePair *list, HPy_ssize_t len) {
   free(list);
 }
 
-static int checkKeys(KeyValuePair *pp, size_t size) {
+static int checkKeys(KeyValuePair *pp, HPy_ssize_t size) {
   // check duplicated keys
   const char *lastKey = pp[0].key;
   size_t lastKeylen = pp[0].keylen;
