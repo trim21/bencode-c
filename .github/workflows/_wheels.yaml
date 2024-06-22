@@ -57,6 +57,7 @@ jobs:
           CIBW_BUILD: 'cp38*'
           CIBW_SKIP: 'pp*'
           CIBW_PRERELEASE_PYTHONS: 'True'
+          CIBW_FREE_THREADED_SUPPORT: '1'
 
       - run: ls ./wheelhouse/
 
