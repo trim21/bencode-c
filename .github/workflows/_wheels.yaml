@@ -56,6 +56,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_BUILD: 'cp38*'
           CIBW_SKIP: 'pp*'
+          CIBW_PRERELEASE_PYTHONS: 'True'
 
       - run: ls ./wheelhouse/
 
