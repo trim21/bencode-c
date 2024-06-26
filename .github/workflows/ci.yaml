@@ -162,4 +162,4 @@ jobs:
           name: wheel
           path: dist
 
-      - run: abi3audit --verbose dist/*.whl
+      - run: abi3audit --verbose dist/*abi3*.whl
