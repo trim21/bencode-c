@@ -38,10 +38,10 @@ jobs:
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
           - {os: macos-14, python-version: '3.8'}
-          - {os: macos-12, python-version: '3.13-dev'}
-          - {os: macos-13, python-version: '3.13-dev'}
-          - {os: macos-14, python-version: '3.13-dev'}
-          - {os: windows-latest, python-version: '3.13-dev'}
+          - {os: macos-12, no-gil: true}
+          - {os: macos-13, no-gil: true}
+          - {os: macos-14, no-gil: true}
+          - {os: windows-latest, no-gil: true}
 
     runs-on: "${{ matrix.os }}"
 
@@ -52,13 +52,13 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
-        if: ${{ !endsWith(matrix.python-version, '-dev') }}
+        if: ${{ matrix.no-gil }}
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
       - uses: deadsnakes/action@v3.1.0
-        if: ${{ endsWith(matrix.python-version, '-dev') }}
+        if: ${{ !matrix.no-gil }}
         with:
           python-version: ${{ matrix.python-version }}
           nogil: ${{ matrix.no-gil }}
@@ -96,10 +96,10 @@ jobs:
           - {python-version: '3.12', no-gil: true}
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
-          - {os: macos-12, python-version: '3.13-dev'}
-          - {os: macos-13, python-version: '3.13-dev'}
-          - {os: macos-14, python-version: '3.13-dev'}
-          - {os: windows-latest, python-version: '3.13-dev'}
+          - {os: macos-12, no-gil: true}
+          - {os: macos-13, no-gil: true}
+          - {os: macos-14, no-gil: true}
+          - {os: windows-latest, no-gil: true}
 
     runs-on: "${{ matrix.os }}"
 
@@ -111,13 +111,13 @@ jobs:
           path: dist
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
-        if: ${{ !endsWith(matrix.python-version, '-dev') }}
+        if: ${{ matrix.no-gil }}
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
       - uses: deadsnakes/action@v3.1.0
-        if: ${{ endsWith(matrix.python-version, '-dev') }}
+        if: ${{ !matrix.no-gil }}
         with:
           python-version: ${{ matrix.python-version }}
           nogil: ${{ matrix.no-gil }}
