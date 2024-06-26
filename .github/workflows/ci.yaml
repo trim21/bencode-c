@@ -42,7 +42,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
-      - run: python -m pip install -U pip
+      - run: pip install -U pip
       - run: pip install -e .
       - run: pip install -r requirements.txt
 
@@ -58,13 +58,13 @@ jobs:
       fail-fast: false
       matrix:
         os: ["macos-12", "macos-13", "macos-14", "windows-latest", "ubuntu-latest"]
+        no-gil: [true, false]
         python-version:
           - "3.8"
           - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
-          - "3.13-dev"
         exclude:
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
@@ -83,7 +83,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
-      - run: python -m pip install -U pip
+      - uses: deadsnakes/action@v3.1.0
+        if: endsWith(matrix.python-version, '-dev')
+        with:
+          python-version: ${{ matrix.python-version }}
+          nogil: ${{ matrix.no-gil }}
+
+      - run: pip install -U pip
       - run: pip install bencode-c --no-index --find-link ./dist/
       - run: pip install -r requirements.txt
 
@@ -123,4 +129,4 @@ jobs:
           name: wheel
           path: dist
 
-      - run: abi3audit --verbose dist/*abi3*.whl
+      - run: abi3audit --verbose dist/*.whl
