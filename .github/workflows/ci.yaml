@@ -28,7 +28,7 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
-          - "3.13.0-b2-dev"
+          - "3.13.0-b2-dev" # dead snakes
         exclude:
           - {python-version: '3.8', no-gil: true}
           - {python-version: '3.9', no-gil: true}
@@ -82,7 +82,7 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
-          - "3.13.0-b2-dev"
+          - "3.13.0-b2-dev" # dead snakes
         exclude:
           - {python-version: '3.8', no-gil: true}
           - {python-version: '3.9', no-gil: true}
