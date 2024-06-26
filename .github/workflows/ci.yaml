@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build-test:
-    name: "${{ matrix.os }} ${{ matrix.python-version }} gil:${{ !matrix.no-gil }}"
+    name: "${{ matrix.python-version }} ${{ matrix.os }} gil:${{ !matrix.no-gil }}"
     strategy:
       max-parallel: 5
       fail-fast: false
@@ -74,7 +74,7 @@ jobs:
 
   test:
     needs: [build]
-    name: "${{ matrix.os }} ${{ matrix.python-version }} gil:${{ !matrix.no-gil }}"
+    name: "${{ matrix.python-version }} ${{ matrix.os }} gil:${{ !matrix.no-gil }}"
     strategy:
       max-parallel: 5
       fail-fast: false
