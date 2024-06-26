@@ -15,17 +15,26 @@ concurrency:
 
 jobs:
   build-test:
+    name: "${{ matrix.os }} ${{ matrix.python-version }} no-gil:${{ matrix.no-gil }}"
     strategy:
       max-parallel: 5
+      fail-fast: false
       matrix:
         os: ["macos-12", "macos-13", "macos-14", "windows-latest", "ubuntu-latest"]
+        no-gil: [true, false]
         python-version:
           - "3.8"
           - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
+          - "3.13-dev"
         exclude:
+          - {python-version: '3.8', no-gil: false}
+          - {python-version: '3.9', no-gil: false}
+          - {python-version: '3.10', no-gil: false}
+          - {python-version: '3.11', no-gil: false}
+          - {python-version: '3.12', no-gil: false}
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
 
@@ -38,11 +47,18 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
+        if: ${{ !endsWith(matrix.python-version, '-dev') }}
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
-      - run: pip install -U pip
+      - uses: deadsnakes/action@v3.1.0
+        if: ${{ endsWith(matrix.python-version, '-dev') }}
+        with:
+          python-version: ${{ matrix.python-version }}
+          nogil: ${{ matrix.no-gil }}
+
+      - run: python -m pip install -U pip
       - run: pip install -e .
       - run: pip install -r requirements.txt
 
@@ -97,7 +113,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           nogil: ${{ matrix.no-gil }}
 
-      - run: pip install -U pip
+      - run: python -m pip install -U pip
       - run: pip install bencode-c --no-index --find-link ./dist/
       - run: pip install -r requirements.txt
 
