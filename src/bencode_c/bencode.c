@@ -8,7 +8,7 @@ extern PyMethodDef decodeImpl[];
 extern HPy BencodeDecodeError;
 
 #if PY_MINOR_VERSION >= 13
-static struct PyModuleDef_Slot my_module_slots[] = {{Py_mod_gil, NULL}, {0, NULL}};
+static struct PyModuleDef_Slot my_module_slots[] = {{Py_mod_gil, Py_MOD_GIL_USED}, {0, NULL}};
 #endif
 
 static PyModuleDef moduleDef = {
