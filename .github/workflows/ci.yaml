@@ -65,6 +65,7 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
+          - "3.13-dev"
         exclude:
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
@@ -79,12 +80,13 @@ jobs:
           path: dist
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
+        if: ${{ !endsWith(matrix.python-version, '-dev') }}
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
       - uses: deadsnakes/action@v3.1.0
-        if: endsWith(matrix.python-version, '-dev')
+        if: ${{ endsWith(matrix.python-version, '-dev') }}
         with:
           python-version: ${{ matrix.python-version }}
           nogil: ${{ matrix.no-gil }}
