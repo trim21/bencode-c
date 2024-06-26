@@ -7,11 +7,13 @@ extern HPy BencodeEncodeError;
 extern PyMethodDef decodeImpl[];
 extern HPy BencodeDecodeError;
 
-static PyModuleDef moduleDef = {
-    .m_base = PyModuleDef_HEAD_INIT,
-    .m_name = "_bencode",
-    .m_doc = "bit-torrent bencode library",
-    .m_size = -1,
+static PyModuleDef moduleDef = {.m_base = PyModuleDef_HEAD_INIT,
+                                .m_name = "_bencode",
+                                .m_doc = "bit-torrent bencode library",
+                                .m_size = -1,
+#if PY_MINOR_VERSION >= 13
+                                .m_slots = {{Py_mod_gil, Py_MOD_GIL_USED}, {0, NULL}}
+#endif
 };
 
 PyMODINIT_FUNC PyInit__bencode(void) {
