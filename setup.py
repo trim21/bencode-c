@@ -1,16 +1,22 @@
-import sys
+import sysconfig
 from glob import glob
 
 from setuptools import setup, Extension, find_packages
 import os
 import sys
 
-if sys.version_info[:2] > (3, 8):
-    macro = [("Py_LIMITED_API", hex(sys.hexversion))]
-    options = {"bdist_wheel": {"py_limited_api": f"cp3{sys.version_info[1]}"}}
-else:
-    macro = [("Py_LIMITED_API", "0x03080000")]
-    options = {"bdist_wheel": {"py_limited_api": "cp38"}}
+free_thread = sysconfig.get_config_var("Py_GIL_DISABLED")
+
+macro = []
+options = {}
+
+if not free_thread:
+    if sys.version_info[:2] > (3, 8):
+        macro = [("Py_LIMITED_API", hex(sys.hexversion))]
+        options = {"bdist_wheel": {"py_limited_api": f"cp3{sys.version_info[1]}"}}
+    else:
+        macro = [("Py_LIMITED_API", "0x03080000")]
+        options = {"bdist_wheel": {"py_limited_api": "cp38"}}
 
 print(macro)
 extra_compile_args = None
