@@ -30,11 +30,11 @@ jobs:
           - "3.12"
           - "3.13-dev"
         exclude:
-          - {python-version: '3.8', no-gil: false}
-          - {python-version: '3.9', no-gil: false}
-          - {python-version: '3.10', no-gil: false}
-          - {python-version: '3.11', no-gil: false}
-          - {python-version: '3.12', no-gil: false}
+          - {python-version: '3.8', no-gil: true}
+          - {python-version: '3.9', no-gil: true}
+          - {python-version: '3.10', no-gil: true}
+          - {python-version: '3.11', no-gil: true}
+          - {python-version: '3.12', no-gil: true}
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
 
@@ -84,11 +84,11 @@ jobs:
           - "3.12"
           - "3.13-dev"
         exclude:
-          - {python-version: '3.8', no-gil: false}
-          - {python-version: '3.9', no-gil: false}
-          - {python-version: '3.10', no-gil: false}
-          - {python-version: '3.11', no-gil: false}
-          - {python-version: '3.12', no-gil: false}
+          - {python-version: '3.8', no-gil: true}
+          - {python-version: '3.9', no-gil: true}
+          - {python-version: '3.10', no-gil: true}
+          - {python-version: '3.11', no-gil: true}
+          - {python-version: '3.12', no-gil: true}
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
 
