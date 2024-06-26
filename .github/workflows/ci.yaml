@@ -37,6 +37,11 @@ jobs:
           - {python-version: '3.12', no-gil: true}
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
+          - {os: macos-14, python-version: '3.8'}
+          - {os: macos-12, python-version: '3.13-dev'}
+          - {os: macos-13, python-version: '3.13-dev'}
+          - {os: macos-14, python-version: '3.13-dev'}
+          - {os: windows-latest, python-version: '3.13-dev'}
 
     runs-on: "${{ matrix.os }}"
 
@@ -91,6 +96,10 @@ jobs:
           - {python-version: '3.12', no-gil: true}
           - {os: macos-14, python-version: '3.8'}
           - {os: macos-14, python-version: '3.9'}
+          - {os: macos-12, python-version: '3.13-dev'}
+          - {os: macos-13, python-version: '3.13-dev'}
+          - {os: macos-14, python-version: '3.13-dev'}
+          - {os: windows-latest, python-version: '3.13-dev'}
 
     runs-on: "${{ matrix.os }}"
 
