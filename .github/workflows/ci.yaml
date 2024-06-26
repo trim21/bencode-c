@@ -20,8 +20,6 @@ jobs:
       max-parallel: 5
       fail-fast: false
       matrix:
-        os: ["macos-12", "macos-13", "macos-14", "windows-latest", "ubuntu-latest"]
-        no-gil: [true, false]
         python-version:
           - "3.8"
           - "3.9"
@@ -29,6 +27,8 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13-dev" # dead snakes
+        no-gil: [true, false]
+        os: ["macos-12", "macos-13", "macos-14", "windows-latest", "ubuntu-latest"]
         exclude:
           - {python-version: '3.8', no-gil: true}
           - {python-version: '3.9', no-gil: true}
@@ -79,8 +79,6 @@ jobs:
       max-parallel: 5
       fail-fast: false
       matrix:
-        os: ["macos-12", "macos-13", "macos-14", "windows-latest", "ubuntu-latest"]
-        no-gil: [true, false]
         python-version:
           - "3.8"
           - "3.9"
@@ -88,6 +86,8 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13-dev" # dead snakes
+        no-gil: [true, false]
+        os: ["macos-12", "macos-13", "macos-14", "windows-latest", "ubuntu-latest"]
         exclude:
           - {python-version: '3.8', no-gil: true}
           - {python-version: '3.9', no-gil: true}
