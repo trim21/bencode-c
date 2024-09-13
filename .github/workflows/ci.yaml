@@ -57,7 +57,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
-      - uses: deadsnakes/action@v3.1.0
+      - uses: deadsnakes/action@v3.2.0
         if: ${{ matrix.no-gil }}
         with:
           python-version: ${{ matrix.python-version }}
@@ -116,7 +116,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
-      - uses: deadsnakes/action@v3.1.0
+      - uses: deadsnakes/action@v3.2.0
         if: ${{ matrix.no-gil }}
         with:
           python-version: ${{ matrix.python-version }}
